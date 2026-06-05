@@ -125,7 +125,17 @@ html, body {
 /* meet-title and event-name cells expand to fill remaining space */
 .header_cell_grow { flex: 1; align-items: flex-start; }
 .header_cell_name { flex: 1; min-width: 0; background-color: var(--color-header-bg); align-items: center; overflow: hidden; }
-#event_name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#event_name {
+    max-width: 100%;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    line-height: 1.2;
+    font-size: 3vh;
+    text-align: center;
+}
 
 .header_label {
     font-size: 1.8vh;
