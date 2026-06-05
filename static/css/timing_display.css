@@ -100,6 +100,9 @@ html, body {
     align-items: stretch;
     flex-shrink: 0;
     background-color: var(--color-header-bg);
+    height: 65px;
+    overflow: hidden;
+    border-bottom: 1px solid var(--color-header-border);
 }
 
 .header_cell {
@@ -117,7 +120,8 @@ html, body {
 
 /* meet-title and event-name cells expand to fill remaining space */
 .header_cell_grow { flex: 1; align-items: flex-start; }
-.header_cell_name { flex: 1; background-color: var(--color-header-bg); align-items: center; }
+.header_cell_name { flex: 1; min-width: 0; background-color: var(--color-header-bg); align-items: center; overflow: hidden; }
+#event_name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .header_label {
     font-size: 1.8vh;
