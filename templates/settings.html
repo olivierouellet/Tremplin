@@ -1143,6 +1143,7 @@ function onPasswordInput(form) {
         }
         if (state.nested) {
             _switchTab(state.nested);
+            setTimeout(function(){ _tabInitFor(state.nested); }, 0);
         }
         if (state.btn) {
             var btn = document.getElementById(state.btn);
@@ -1358,6 +1359,12 @@ function onPasswordInput(form) {
 
     document.querySelectorAll('.nav-tabs a').forEach(function(link) {
         if (link.getAttribute('href') === '#tab-test')
+            link.addEventListener('click', function() {
+                _ensureUpdateSock();
+                _updateSock.off('test_status').on('test_status', _loadTestStatus);
+                _loadTestStatus();
+            });
+        if (link.getAttribute('href') === '#tab-devtools')
             link.addEventListener('click', function() {
                 _ensureUpdateSock();
                 _updateSock.off('test_status').on('test_status', _loadTestStatus);
