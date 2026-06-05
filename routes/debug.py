@@ -31,17 +31,15 @@ _TERMINAL_ALLOWED_CMDS = {
 @bp.route('/test_status')
 @flask_login.login_required
 def route_test_status():
-    meet_files = glob.glob(os.path.join(state.MEET_FOLDER, '*.lxf')) + \
-                 glob.glob(os.path.join(state.MEET_FOLDER, '*.csv'))
     return flask.jsonify({
         'playing':        state._test_session is not None,
         'session':        os.path.basename(state._test_session) if state._test_session else '',
         'recording':      state._record_handle is not None,
         'sessions':       _list_sessions(),
         'speed':          state.in_speed,
-        'has_meet':       bool(meet_files) and not state._test_meet_active,
+        'has_meet':       bool(state._active_meet_file) and not state._test_meet_active,
         'test_meet':      state._test_meet_active,
-        'test_meet_name': os.path.basename(meet_files[0]) if state._test_meet_active and meet_files else '',
+        'test_meet_name': state._active_meet_file if state._test_meet_active else '',
     })
 
 
