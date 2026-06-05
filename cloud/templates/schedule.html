@@ -385,6 +385,7 @@
         /* ── Current heat highlight ── */
         .heat-card.heat-current .heat-header { background: var(--color-header-border); }
         .heat-card.heat-current { outline: 2px solid var(--color-time); outline-offset: -2px; }
+        .heat-card { scroll-margin-top: 70px; }
 
         /* ── Empty states ── */
         #waiting {
@@ -670,7 +671,7 @@ function highlight() {
         if (match) found = card;
     });
     if (found && needsScroll) {
-        found.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        found.scrollIntoView({ behavior: 'smooth', block: 'start' });
         needsScroll = false;
     }
 }
