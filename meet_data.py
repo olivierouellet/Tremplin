@@ -121,8 +121,8 @@ def _build_results_snapshot():
     else:
         lanes.sort(key=lambda r: r['channel'])
     return {
-        'event':      ''.join(state._decoder.event_heat_info[:3]).strip(),
-        'heat':       ''.join(state._decoder.event_heat_info[-3:]).strip(),
+        'event':      str(ev) if ev else '',
+        'heat':       str(ht) if ht else '',
         'event_name': get_event_name_display(ev) if ev else '',
         'lanes':      lanes,
     }

@@ -53,7 +53,7 @@ class QuantumDecoder(ConsoleDecoder):
         self.lane_places:  dict[int, str]  = {}
         self.lane_running: dict[int, bool] = {}
         self.lane_splits:  dict[int, int]  = {}
-        self._last_event:  tuple[int, int] = (0, 0)
+        self.last_event_sent:  tuple[int, int] = (0, 0)
         self._race_active  = False
         self.lane_seed_times: dict[int, str] = {}
         self.configure(cfg)
@@ -153,8 +153,8 @@ class QuantumDecoder(ConsoleDecoder):
                 return {}
             if ev > 0 and ht > 0:
                 tup = (ev, ht)
-                if tup != self._last_event:
-                    self._last_event = tup
+                if tup != self.last_event_sent:
+                    self.last_event_sent = tup
                     updates['current_event'] = str(ev)
                     updates['current_heat']  = str(ht)
                     updates.update(self.reset_lanes())
