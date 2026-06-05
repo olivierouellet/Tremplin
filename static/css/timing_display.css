@@ -141,7 +141,7 @@ html, body {
 }
 
 .header_label {
-    font-size: 1.8vh;
+    font-size: min(1.8vh, 13px);
     color: var(--color-header-label);
     letter-spacing: 0.08em;
 }
@@ -154,7 +154,7 @@ html, body {
 /* DSEG7 for the event/heat number digits */
 #current_event, #current_heat {
     font-family: var(--font-digits), monospace;
-    font-size: 4.5vh;
+    font-size: min(4.5vh, 30px);
     color: var(--color-header-label);
 }
 
