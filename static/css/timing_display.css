@@ -136,6 +136,9 @@ html, body {
     font-size: 3vh;
     text-align: center;
 }
+@media (orientation: landscape) and (max-height: 500px) {
+    #event_name { font-size: 3vw; }
+}
 
 .header_label {
     font-size: 1.8vh;
