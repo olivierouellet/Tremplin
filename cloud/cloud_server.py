@@ -603,26 +603,38 @@ def on_relay_register(data):
                       namespace='/relay', to=flask.request.sid)
         return
 
-    meet_id = secrets.token_urlsafe(8)
+    sid = flask.request.sid
     with _lock:
-        _meets[meet_id] = {
-            'relay_key':      key,
-            'relay_sid':      flask.request.sid,
-            'organizer':      keys[key]['organizer'],
-            'name':           data.get('name', ''),
-            'location':       data.get('location', ''),
-            'sport':          data.get('sport', ''),
-            'settings':       data.get('settings', {}),
-            'connected_at':   datetime.datetime.now().strftime('%H:%M:%S'),
-            'last_scoreboard': {},
-            'last_results':    {},
-            'last_next_heats': {},
-            'schedule_data':   {},
-        }
-        _relay_sids[flask.request.sid] = meet_id
+        existing_id = _relay_sids.get(sid)
+        if existing_id and existing_id in _meets:
+            # Same socket re-registering (e.g. settings change) — update in place
+            meet_id = existing_id
+            _meets[meet_id].update({
+                'name':     data.get('name', ''),
+                'location': data.get('location', ''),
+                'sport':    data.get('sport', ''),
+                'settings': data.get('settings', {}),
+            })
+        else:
+            meet_id = secrets.token_urlsafe(8)
+            _meets[meet_id] = {
+                'relay_key':       key,
+                'relay_sid':       sid,
+                'organizer':       keys[key]['organizer'],
+                'name':            data.get('name', ''),
+                'location':        data.get('location', ''),
+                'sport':           data.get('sport', ''),
+                'settings':        data.get('settings', {}),
+                'connected_at':    datetime.datetime.now().strftime('%H:%M:%S'),
+                'last_scoreboard': {},
+                'last_results':    {},
+                'last_next_heats': {},
+                'schedule_data':   {},
+            }
+            _relay_sids[sid] = meet_id
 
     socketio.emit('registered', {'meet_id': meet_id},
-                  namespace='/relay', to=flask.request.sid)
+                  namespace='/relay', to=sid)
     print(f'[cloud] {keys[key]["organizer"]} registered as meet {meet_id}', flush=True)
 
 
