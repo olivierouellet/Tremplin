@@ -73,7 +73,7 @@
     .timing-table tbody td:nth-child(5) { font-size: 0.60em; }
 }
 @media (orientation: landscape) {
-    .timing-row-odd, .timing-row-even { font-size: min({{ (42 / num_lanes) | round(1) }}vh, 32px); }
+    .timing-row-odd, .timing-row-even { font-size: {{ (42 / num_lanes) | round(1) }}vh; }
     .td_time  { font-size: 0.72em; padding: 0 0.8vw; }
     .td_delta { font-size: 0.58em; padding: 0 0.8vw; }
     [id^="lane_club"] { font-size: 0.68em; }
@@ -82,6 +82,10 @@
     .time-column  { width: 17vw; max-width: 17vw; }
     .delta-column { width: 14vw; max-width: 14vw; }
     table.timing-table .lane-name-cell { font-size: 0.85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+/* Cap row font on tablets and desktops — phones are handled by max-height: 500px below */
+@media (orientation: landscape) and (min-height: 600px) {
+    .timing-row-odd, .timing-row-even { font-size: 32px; }
 }
 /* Phone landscape: vh is ~375px so vh-based header fonts become tiny.
    Switch to vw-based sizing for screens shorter than 500px. Desktop/TV
