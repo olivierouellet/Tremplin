@@ -1,0 +1,2015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tremplin — Settings</title>
+<link rel="stylesheet" href="/static/css/bootstrap.min.css">
+<style>
+:root {
+    --color-bg:         {{ theme_colors.bg }};
+    --color-row-odd:    {{ theme_colors.row_odd }};
+    --color-row-text:   {{ theme_colors.row_text }};
+    --color-time:       {{ theme_colors.time }};
+    --font-family:      '{{ theme_fonts.family }}';
+    --font-digits:      '{{ theme_fonts.digits }}';
+    --font-timing:      '{{ theme_fonts.timing }}';
+}
+/* ── Modern dark theme override ─────────────────────────────────────────── */
+body {
+    background: var(--color-bg);
+    color: #d0d0d0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.container { padding-top: 24px; padding-bottom: 40px; }
+h2 { color: #ffffff; font-weight: 600; font-size: 1.25em; letter-spacing: 0.01em; }
+h3, h4 { color: #cccccc; }
+label { color: #999; font-size: 0.82em; text-transform: uppercase; letter-spacing: 0.05em; }
+hr  { border-color: #2a2a2a; }
+p.text-muted { color: #666 !important; }
+code { background: #1e1e1e; color: #aef; border: 1px solid #333; padding: 1px 5px; border-radius: 4px; }
+
+/* ── Nav tabs ── */
+.nav-tabs { border-bottom: 1px solid #2a2a2a; }
+.nav-tabs > li > a {
+    color: #888;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    padding: 10px 16px;
+    font-size: 0.88em;
+    font-weight: 500;
+    transition: color 0.15s;
+}
+.nav-tabs > li > a:hover { color: #ccc; background: transparent; border-color: transparent; border-bottom-color: #444; }
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus { color: #fff; background: transparent; border: none; border-bottom: 2px solid #fff; }
+.tab-content { padding-top: 20px; }
+#tab-appearance > .nav-tabs,
+#tab-netgroup   > .nav-tabs,
+#tab-devtools   > .nav-tabs { margin-top: -14px; }
+
+/* ── Cards / panels ── */
+.tab-pane > .row > div > div[style*="background:#f5f5f5"],
+.tab-pane > .row > div > div[style*="background: #f5f5f5"] {
+    background: #1a1a1a !important;
+    border-color: #2e2e2e !important;
+    border-radius: 10px !important;
+}
+div[style*="background:#f5f5f5"] { background: #1a1a1a !important; border-color: #2e2e2e !important; }
+div[style*="background: #f5f5f5"] { background: #1a1a1a !important; border-color: #2e2e2e !important; }
+div[style*="background:#fcf8e3"] { background: #2a2310 !important; border-color: #4a3d10 !important; color: #c8b060 !important; }
+div[style*="background:#fff8e1"] { background: #2a2310 !important; border-color: #4a3d10 !important; }
+div[style*="background:#1a1a1a"] { border-color: #2e2e2e !important; }
+
+/* ── Form controls ── */
+.form-control {
+    background: #111 !important;
+    border: 1px solid #333 !important;
+    color: #d0d0d0 !important;
+    border-radius: 7px !important;
+    box-shadow: none !important;
+}
+.form-control:focus { border-color: #555 !important; box-shadow: none !important; }
+.form-control[disabled], .form-control[readonly] { background: #0a0a0a !important; color: #555 !important; }
+select.form-control option { background: #1a1a1a; color: #d0d0d0; }
+input[type="color"] { border: 1px solid #333; border-radius: 5px; background: #111; }
+
+/* ── Buttons ── */
+.btn { border-radius: 7px; font-size: 0.88em; font-weight: 500; border: none; transition: opacity 0.15s; }
+.btn:hover { opacity: 0.85; }
+.btn-default { background: #2a2a2a !important; color: #ccc !important; border: 1px solid #3a3a3a !important; }
+.btn-default:hover { background: #333 !important; color: #fff !important; }
+.btn-primary { background: #2563eb !important; color: #fff !important; }
+.btn-success { background: #16a34a !important; color: #fff !important; }
+.btn-warning { background: #d97706 !important; color: #fff !important; }
+.btn-danger  { background: #dc2626 !important; color: #fff !important; }
+.btn-info    { background: #0891b2 !important; color: #fff !important; }
+.btn[disabled] { opacity: 0.35 !important; }
+
+/* ── Tables ── */
+.table { color: #d0d0d0; }
+.table > thead > tr > th { border-color: #2a2a2a; color: #888; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.05em; background: #151515; }
+.table > tbody > tr > td { border-color: #222; }
+.table-striped > tbody > tr:nth-of-type(odd) { background: #161616; }
+.table-hover > tbody > tr:hover { background: #1e1e1e; }
+.table-bordered { border-color: #2a2a2a !important; }
+.table-bordered > thead > tr > th,
+.table-bordered > tbody > tr > td { border-color: #2a2a2a !important; }
+
+/* ── Alerts / well ── */
+.alert-warning { background: #2a2310; border-color: #4a3d10; color: #c8b060; }
+.alert-danger  { background: #2a1010; border-color: #5c2020; color: #e07070; }
+.alert-success { background: #0f2a1a; border-color: #1a5c30; color: #70c080; }
+.alert-info    { background: #0f1e2a; border-color: #1a3a5c; color: #70a0d0; }
+.well { background: #151515; border-color: #2a2a2a; box-shadow: none; }
+
+/* ── Misc ── */
+.input-group { width: 100%; }
+.input-group-addon { background: #1a1a1a; border-color: #333; color: #888; }
+.panel { background: #1a1a1a; border-color: #2e2e2e; }
+.panel-heading { background: #222 !important; border-color: #2e2e2e; color: #ccc; }
+a { color: #7aaaf0; }
+a:hover { color: #aac8ff; }
+small, .small { color: #777; }
+
+/* ── Time input vertical centering ── */
+input[type="time"].form-control {
+    line-height: 1;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    -webkit-align-items: center;
+    align-items: center;
+}
+input[type="time"]::-webkit-datetime-edit { padding: 0; line-height: 1.4; }
+
+/* ── Password / autofill override ── */
+input[type="password"] { background: #111 !important; color: #d0d0d0 !important; }
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 30px #111 inset !important;
+    -webkit-text-fill-color: #d0d0d0 !important;
+    caret-color: #d0d0d0;
+}
+
+/* ── Test tab: meet-loaded warning ── */
+#test-has-meet-warning {
+    background: #2a2310 !important;
+    border: 1px solid #4a3d10 !important;
+    color: #c8b060 !important;
+}
+@font-face { font-family:'Overpass Mono';  src:url('/static/fonts/OverpassMono-Regular.woff2')  format('woff2'); }
+@font-face { font-family:'DSEG7Classic';   src:url('/static/fonts/DSEG7Classic-Regular.woff2')   format('woff2'); }
+@font-face { font-family:'DSEG14Classic';  src:url('/static/fonts/DSEG14Classic-Regular.woff2')  format('woff2'); }
+@font-face { font-family:'Share Tech Mono';src:url('/static/fonts/ShareTechMono-Regular.woff2')  format('woff2'); }
+@font-face { font-family:'Orbitron';       src:url('/static/fonts/Orbitron-Regular.woff2')        format('woff2'); }
+@font-face { font-family:'Roboto Mono';    src:url('/static/fonts/RobotoMono-Regular.woff2')      format('woff2'); }
+</style>
+<script>
+function onPasswordInput(form) {
+    document.getElementById('pw-confirm-row').style.visibility =
+        form.password.value.length > 3 ? 'visible' : 'hidden';
+}
+</script>
+</head>
+<body>
+<div class="container">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h2 style="margin:0;">Tremplin — Settings</h2>
+        <div style="display:flex; gap:8px;">
+            <a href="/help" class="btn btn-default btn-sm">Help</a>
+            <a href="/info" class="btn btn-default btn-sm">Info</a>
+            <form action="/logout" style="margin:0;">
+                <input type="submit" value="Log Out" class="btn btn-default btn-sm"/>
+            </form>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px; padding:7px 12px; background:#141414; border:1px solid #2a2a2a; border-radius:6px;">
+        <span style="color:#555; font-size:0.8em; margin-right:4px; text-transform:uppercase; letter-spacing:0.05em;">Open</span>
+        <div class="btn-group">
+            <a href="/live"          target="_blank" class="btn btn-default btn-xs">Live</a>
+            <a href="/operator"      target="_blank" class="btn btn-default btn-xs">Operator</a>
+            <a href="/mobile"        target="_blank" class="btn btn-default btn-xs">Mobile</a>
+        </div>
+        <div class="btn-group">
+            <a href="/live-mobile"   target="_blank" class="btn btn-default btn-xs">Live Mobile</a>
+            <a href="/results"       target="_blank" class="btn btn-default btn-xs">Results</a>
+            <a href="/schedule"      target="_blank" class="btn btn-default btn-xs">Schedule</a>
+        </div>
+        <div class="btn-group">
+            <a href="/meet"          target="_blank" class="btn btn-default btn-xs">Meet</a>
+            <a href="/lenex_preview" target="_blank" class="btn btn-default btn-xs">Lenex</a>
+        </div>
+        <div class="btn-group">
+            <a href="/console"       target="_blank" class="btn btn-default btn-xs">Console</a>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs" style="margin-bottom:16px;">
+        <li class="active"><a href="#tab-meet" data-toggle="tab">Meet Setup</a></li>
+        <li><a href="#tab-debug" data-toggle="tab">Timing</a></li>
+        <li><a href="#tab-time" data-toggle="tab">Clock</a></li>
+        <li><a href="#tab-appearance" data-toggle="tab">Appearance</a></li>
+        <li><a href="#tab-netgroup" data-toggle="tab">Network</a></li>
+        <li><a href="#tab-update" data-toggle="tab">Update &amp; Backup</a></li>
+        <li><a href="#tab-devtools" data-toggle="tab">Debug</a></li>
+        <li><a href="#tab-account" data-toggle="tab">Account</a></li>
+    </ul>
+
+    <div class="tab-content">
+
+        <!-- ── Meet Setup ──────────────────────────────────────────── -->
+        <div class="tab-pane active" id="tab-meet">
+        <div class="row"><div class="col-lg-8">
+            <div id="meet-test-warning" style="display:none; background:#fcf8e3; border:1px solid #faebcc; border-radius:4px; padding:8px 14px; margin-bottom:8px; font-size:0.9em; color:#8a6d3b;">
+                ⚠ A test session is running — meet file upload is disabled.
+            </div>
+            <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px; display:flex;">
+                <div style="flex:1;">
+                    <!-- Two non-nested forms: one for loading/unloading, one for uploading -->
+                    <form id="meet_load_form" action="/settings" method="post">
+                        <input type="hidden" name="meet_file_load_submit" value="1">
+                    </form>
+                    <form id="meet_upload_form" action="/settings" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="meet_setup_submit" value="1">
+                    </form>
+                    <label style="font-weight:normal;">Meet Files</label>
+                    <select form="meet_load_form" id="meet-file-select" name="meet_file_select" class="form-control input-sm" style="margin-bottom:4px;" onchange="_fsubmit(document.getElementById('meet_load_form'))">
+                        <option value="" {% if not active_meet_file %}selected{% endif %}>— No file loaded —</option>
+                        {% for f in meet_file_list %}
+                        <option value="{{ f }}" {% if f == active_meet_file %}selected{% endif %}>{{ f }}</option>
+                        {% endfor %}
+                    </select>
+                    <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap; overflow:hidden;">
+                        <div class="file-picker" style="flex-shrink:0;">
+                            <label class="btn btn-default btn-xs" style="margin:0; font-weight:normal; cursor:pointer; white-space:nowrap;">
+                                Add Meet File<input form="meet_upload_form" id="meet_file" name="meet_file" type="file" accept=".csv,.lxf" style="display:none;" onchange="_fsubmit(document.getElementById('meet_upload_form'))">
+                            </label>
+                            <span class="file-msg" style="font-size:0.85em; color:#888; display:inline; margin-left:4px;"></span>
+                        </div>
+                        <div id="meet-file-actions" style="display:contents;">
+                            {% if active_meet_file %}
+                            <a id="meet-preview-btn" href="{{ '/hytek_preview' if active_meet_file.endswith('.csv') else '/lenex_preview' }}" class="btn btn-default btn-xs" style="flex-shrink:0;">Preview</a>
+                            <button class="btn btn-default btn-xs danger" type="button" style="flex-shrink:0;" onclick="var f=document.getElementById('meet-file-select').value;if(f&&confirm('Delete '+f+'?'))location.href='/meet_delete?file='+encodeURIComponent(f);">Delete</button>
+                            <button class="btn btn-default btn-xs danger" type="button" style="flex-shrink:0;" onclick="if(confirm('Delete all meet files?'))location.href='/meet_clear';">Delete All</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px; margin-top:10px;">
+                <form id="pool_setup_form" action="/settings" method="POST">
+                    <input type="hidden" name="pool_setup_submit" value="1">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                        <label for="num_lanes" style="min-width:160px; font-weight:normal; margin:0;">Number of Lanes</label>
+                        <select id="num_lanes" name="num_lanes" class="form-control input-sm" style="width:120px;" onchange="_fsubmit(this.form)">
+                            <option value="12" {% if num_lanes == 12 %}selected{% endif %}>12 Lanes</option>
+                            <option value="10" {% if num_lanes == 10 %}selected{% endif %}>10 Lanes</option>
+                            <option value="8"  {% if num_lanes == 8  %}selected{% endif %}>8 Lanes</option>
+                            <option value="6"  {% if num_lanes == 6  %}selected{% endif %}>6 Lanes</option>
+                            <option value="4"  {% if num_lanes == 4  %}selected{% endif %}>4 Lanes</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                        <label style="min-width:160px; font-weight:normal; margin:0;">Pool length</label>
+                        <select name="pool_length" class="form-control input-sm" style="width:80px;" onchange="_fsubmit(this.form)">
+                            <option value="25" {% if pool_length == 25 %}selected{% endif %}>25 m</option>
+                            <option value="33" {% if pool_length == 33 %}selected{% endif %}>33 m</option>
+                            <option value="50" {% if pool_length == 50 %}selected{% endif %}>50 m</option>
+                        </select>
+                        <span style="color:#888;"><small>(used to calculate expected splits)</small></span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                        <label style="min-width:160px; font-weight:normal; margin:0;">Touchpads</label>
+                        <select name="touchpad_sides" class="form-control input-sm" style="width:120px;" onchange="_fsubmit(this.form)">
+                            <option value="2" {% if touchpad_sides == 2 %}selected{% endif %}>Both ends</option>
+                            <option value="1" {% if touchpad_sides == 1 %}selected{% endif %}>One end only</option>
+                        </select>
+                        <span style="color:#888;"><small>(one end = each touch counts as 2 splits)</small></span>
+                    </div>
+                    {% if lenex_pool_length and lenex_pool_length != pool_length %}
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                        <span style="min-width:160px;"></span>
+                        <div style="background:#3a2a00; border:1px solid #a07000; color:#f0c040; border-radius:4px; padding:4px 10px; font-size:0.85em;">
+                            ⚠ Lenex file specifies {{ lenex_pool_length }} m — your setting ({{ pool_length }} m) will be used.
+                        </div>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div></div>
+        </div>
+
+        <!-- ── Account ─────────────────────────────────────────────── -->
+        <div class="tab-pane" id="tab-account">
+        <div class="row"><div class="col-lg-8">
+            <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px; display:flex;">
+                <div style="flex:1;">
+                    <form id="account_form" action="/settings" method="POST">
+                        <div style="display:flex; gap:12px; margin-bottom:8px;">
+                            <div style="flex:1;">
+                                <label for="user_name" style="font-weight:normal;">User Name</label>
+                                <input name="user_name" id="user_name" value="{{ user_name }}" class="form-control">
+                            </div>
+                            <div style="flex:1;"></div>
+                        </div>
+                        <hr style="margin:8px 0;">
+                        <div style="display:flex; gap:12px; margin-bottom:4px;">
+                            <div style="flex:1;">
+                                <label for="password" style="font-weight:normal;">Password</label>
+                                <input name="password" id="password" type="password" placeholder="New Password"
+                                    autocomplete="new-password" class="form-control" oninput="onPasswordInput(this.form);">
+                                <div id="pw-confirm-row" style="visibility:hidden;">
+                                    <input name="password2" type="password" placeholder="Verify Password"
+                                        autocomplete="new-password" class="form-control">
+                                </div>
+                            </div>
+                            <div style="flex:1;"></div>
+                        </div>
+                    </form>
+                </div>
+                <div style="margin-left:14px; padding-top:20px;">
+                    <button id="btn-update-account" class="btn btn-default btn-sm" form="account_form" type="submit">Update</button>
+                </div>
+            </div>
+        </div></div>
+        </div>
+
+        <!-- ── Time ────────────────────────────────────────────────── -->
+        <div class="tab-pane" id="tab-time">
+        <div class="row"><div class="col-lg-8">
+            <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px;">
+
+                <div style="font-size:0.9em; font-weight:bold; margin-bottom:6px;">Current Time</div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                    <span id="time-display" style="font-size:1.4em; font-family:monospace; flex:1;">—</span>
+                    <span id="time-tz" style="font-size:0.9em; color:#888;"></span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                    <span id="ntp-status" style="font-size:0.9em; flex:1; color:#888;">—</span>
+                    <button id="btn-time-sync" class="btn btn-default btn-xs" style="width:80px;" onclick="timeSync()">Sync NTP</button>
+                </div>
+
+                <hr style="margin:8px 0;">
+
+                <div style="font-size:0.9em; font-weight:bold; margin-bottom:4px;">Set Time Manually</div>
+                <p style="font-size:0.85em; color:#888; margin:0 0 8px;">Disables NTP synchronization.</p>
+                <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
+                    <input type="text" id="time-set-date" class="form-control input-sm" style="flex:1; min-width:130px;" placeholder="YYYY/MM/DD" maxlength="10">
+                    <input type="time" id="time-set-time" class="form-control input-sm" style="flex:1; min-width:100px;" step="1">
+                    <button class="btn btn-default btn-xs" style="width:80px;" onclick="timeSet()">Set Time</button>
+                </div>
+                <div id="time-set-status" style="margin-top:6px; font-size:0.85em;"></div>
+
+            </div>
+        </div></div>
+        </div>
+
+        <!-- ── Update ──────────────────────────────────────────────── -->
+        <div class="tab-pane" id="tab-update">
+        <div class="row"><div class="col-lg-8">
+            <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                    <span style="font-size:0.9em; color:#555;">Current version:</span>
+                    <span id="current-version" style="font-size:0.9em; font-family:monospace; color:#333;">—</span>
+                    <button class="btn btn-default btn-xs" onclick="loadVersions()" style="margin-left:4px;">Refresh</button>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                    <select id="version-select" class="form-control input-sm" style="flex:1;">
+                        <option value="">Latest (from GitHub)</option>
+                    </select>
+                    <button id="btn-run-update" class="btn btn-default btn-sm" onclick="startUpdate()">Install</button>
+                    <span id="update-status" style="font-size:0.9em; color:#888;"></span>
+                </div>
+                <pre id="update-output" style="display:none; background:#1a1a1a; color:#e0e0e0; padding:8px 12px; border-radius:3px; min-height:80px; max-height:360px; overflow-y:auto; font-size:0.8em; margin:0;"></pre>
+
+                <hr style="margin:12px 0 8px;">
+
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                    <button id="btn-os-update" class="btn btn-default btn-sm" onclick="startOsUpdate()">Update OS</button>
+                    <span id="os-update-status" style="font-size:0.9em; color:#888;"></span>
+                </div>
+                <pre id="os-update-output" style="display:none; background:#1a1a1a; color:#e0e0e0; padding:8px 12px; border-radius:3px; min-height:80px; max-height:360px; overflow-y:auto; font-size:0.8em; margin:0;"></pre>
+
+                <hr style="margin:12px 0 8px;">
+
+                <p style="margin:0 0 8px; font-size:0.9em; color:#555;">
+                    Backup includes meet files, images, recorded sessions, and settings.
+                </p>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <a href="/backup_download" class="btn btn-default btn-sm">Download Backup</a>
+                    <div class="file-picker">
+                        <label class="btn btn-default btn-sm" style="margin:0; font-weight:normal; cursor:pointer;">
+                            Restore Backup<input type="file" accept=".tar.gz" style="display:none;" onchange="restoreBackup(this)">
+                        </label>
+                    </div>
+                    <span id="restore-status" style="font-size:0.9em; color:#888;"></span>
+                </div>
+            </div>
+        </div></div>
+        </div>
+
+        <!-- ── Timing ────────────────────────────────────────────── -->
+        <div class="tab-pane" id="tab-debug">
+        <div class="row"><div class="col-lg-8">
+            <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px; margin-bottom:10px; display:flex;">
+                <div style="flex:1;">
+                    <form id="timing_form" action="/settings" method="POST">
+                        <input type="hidden" name="timing_settings_submit" value="1">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                            <label for="console_type" style="min-width:160px; font-weight:normal; margin:0;">Timing Equipment</label>
+                            <select id="console_type" name="console_type" class="form-control input-sm" style="flex:1; max-width:360px;" onchange="_fsubmit(this.form)">
+                            {% for key, label in console_options %}
+                                <option value="{{key}}" {% if key == console_type %}selected{% endif %}>{{label}}</option>
+                            {% endfor %}
+                            </select>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:0;">
+                            <label for="serial_port" style="min-width:160px; font-weight:normal; margin:0;">Serial Port</label>
+                            <select id="serial_port" name="serial_port" class="form-control input-sm" style="flex:1; max-width:360px;" onchange="_fsubmit(this.form)">
+                            {% for port, desc in serial_port_list %}
+                                <option value="{{port}}" {% if port == serial_port %}selected{% endif %}>{{desc}}</option>
+                            {% endfor %}
+                            </select>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px; margin-bottom:10px;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                    <span style="font-size:0.9em; font-weight:bold; flex:1;">Connection</span>
+                    <span id="serial-status-badge" style="font-size:0.8em; padding:2px 8px; border-radius:10px; background:#ccc; color:#333;">—</span>
+                </div>
+                <pre id="serial-log" style="background:#1a1a1a; color:#ccc; font-size:0.78em; height:90px; overflow-y:auto; margin:0; padding:6px 10px; border-radius:4px; white-space:pre-wrap; word-break:break-all;"></pre>
+            </div>
+            <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                    <span style="font-size:0.9em; font-weight:bold; flex:1;">Serial Monitor</span>
+                    <button id="btn-debug-toggle" class="btn btn-default btn-xs" style="width:70px;" onclick="debugToggle()">Enable</button>
+                    <button class="btn btn-default btn-xs" style="width:70px;" onclick="debugClear()">Clear</button>
+                </div>
+                <pre id="debug-output" style="background:#1a1a1a; color:#e0e0e0; font-size:0.8em; height:300px; overflow-y:auto; margin:0; padding:6px 10px; border-radius:4px; white-space:pre-wrap; word-break:break-all;"></pre>
+            </div>
+        </div></div>
+        </div>
+
+        <!-- ── Appearance ─────────────────────────────────────────── -->
+        <div class="tab-pane" id="tab-appearance">
+            <ul class="nav nav-tabs" style="margin-bottom:16px;">
+                <li class="active"><a href="#tab-flow" data-toggle="tab">Flow</a></li>
+                <li><a href="#tab-display" data-toggle="tab">Display</a></li>
+                <li><a href="#tab-theme" data-toggle="tab">Theme</a></li>
+            </ul>
+            <div class="tab-content">
+                <!-- ── Flow ───────────────────────────────────────────────── -->
+                <div class="tab-pane active" id="tab-flow">
+                <div class="row"><div class="col-lg-8">
+                <form action="/settings" method="POST">
+                    <input type="hidden" name="flow_settings_submit" value="1">
+                    <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px; display:flex;">
+                        <div style="flex:1;">
+
+                            <!-- State diagram -->
+                            <div style="font-size:0.9em; font-weight:bold; margin-bottom:8px;">Screen Modes</div>
+                            <div style="font-size:0.85em; color:#555; margin-bottom:12px; line-height:1.8;">
+                                The scoreboard switches modes automatically based on what the CTS console is sending.
+                            </div>
+                            <div style="font-family:monospace; font-size:0.82em; background:#141414; border:1px solid #2e2e2e; border-radius:3px; padding:10px 14px; line-height:2; margin-bottom:14px;">
+                                <div><span style="background:#333; color:#ccc; padding:1px 6px; border-radius:3px;">Splash</span> &nbsp;←&nbsp; No activity for <strong>Intro timeout</strong> or <strong>Results timeout</strong></div>
+                                <div style="padding-left:16px; color:#666;">↓ New event / heat received</div>
+                                <div><span style="background:#0f2a1a; color:#70c080; padding:1px 6px; border-radius:3px;">Intro</span> &nbsp;&nbsp;&nbsp;Shows swimmer names — if no names, goes straight to Running</div>
+                                <div style="padding-left:16px; color:#666;">↓ Any lane starts running</div>
+                                <div><span style="background:#0f1e2a; color:#70a0d0; padding:1px 6px; border-radius:3px;">Running</span> &nbsp;Shows live clock in all active lanes</div>
+                                <div style="padding-left:16px; color:#666;">↓ All lanes finish</div>
+                                <div><span style="background:#2a2310; color:#c8b060; padding:1px 6px; border-radius:3px;">Results</span> &nbsp;Shows final times and podium highlights (name column empty if no names loaded)</div>
+                            </div>
+
+                            <hr style="margin:8px 0;">
+
+                            <!-- Timeout inputs -->
+                            <div style="font-size:0.9em; font-weight:bold; margin-bottom:4px;">Splash timeouts <small style="font-weight:normal; color:#666;">(scoreboard.html only)</small></div>
+                            <div style="font-size:0.82em; color:#666; margin-bottom:8px;">These apply only to <code>scoreboard.html</code>, which has a Splash mode. <code>live.html</code> has no splash.</div>
+                            <div style="display:flex; flex-direction:column; gap:8px; font-size:0.9em; margin-bottom:14px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <label style="min-width:160px; font-weight:normal; margin:0;">Intro → Splash after</label>
+                                    <input type="number" name="intro_timeout" value="{{ intro_timeout }}" min="5" max="3600"
+                                           class="form-control input-sm" style="width:80px;">
+                                    <span style="color:#888;">seconds &nbsp;<small>(if race doesn't start)</small></span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <label style="min-width:160px; font-weight:normal; margin:0;">Results → Splash after</label>
+                                    <input type="number" name="results_timeout" value="{{ results_timeout }}" min="5" max="3600"
+                                           class="form-control input-sm" style="width:80px;">
+                                    <span style="color:#888;">seconds</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <label style="min-width:160px; font-weight:normal; margin:0;">No server update → Splash after</label>
+                                    <input type="number" name="server_update_timeout" value="{{ server_update_timeout }}" min="10" max="3600"
+                                           class="form-control input-sm" style="width:80px;">
+                                    <span style="color:#888;">seconds</span>
+                                </div>
+                            </div>
+
+                            <hr style="margin:8px 0;">
+
+                            <div style="font-size:0.9em; font-weight:bold; margin-bottom:8px;">Timing</div>
+                            <div style="display:flex; flex-direction:column; gap:8px; font-size:0.9em;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <label style="min-width:160px; font-weight:normal; margin:0;">Finish debounce</label>
+                                    <input type="number" name="finish_debounce" value="{{ finish_debounce }}" min="0.5" max="10" step="0.1"
+                                           class="form-control input-sm" style="width:80px;">
+                                    <span style="color:#888;">seconds &nbsp;<small>(lap split vs. true finish)</small></span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <label style="min-width:160px; font-weight:normal; margin:0;">Split min. duration</label>
+                                    <input type="number" name="split_min_duration" value="{{ split_min_duration }}" min="0.5" max="10" step="0.1"
+                                           class="form-control input-sm" style="width:80px;">
+                                    <span style="color:#888;">seconds &nbsp;<small>(min. stop time to count as a split)</small></span>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div style="margin-left:14px; padding-top:20px;">
+                            <button id="btn-update-flow" class="btn btn-default btn-sm" type="submit">Update</button>
+                        </div>
+                    </div>
+                </form>
+                </div></div>
+                </div>
+
+                <!-- ── Display Options ─────────────────────────────────────── -->
+                <div class="tab-pane" id="tab-display">
+                <div class="row"><div class="col-lg-8"><form id="display-settings-form" action="/settings" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="display_settings_submit" value="1">
+                    <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px; display:flex;">
+                        <div style="flex:1;">
+                            <div style="display:flex; gap:12px; margin-bottom:8px;">
+                                <div style="flex:1;">
+                                    <label for="meet_title" style="font-weight:normal;">Title</label>
+                                    <input id="meet_title" name="meet_title" value="{{ meet_title }}" class="form-control">
+                                </div>
+                                <div style="flex:1;"></div>
+                            </div>
+                            <hr style="margin:8px 0;">
+                            <div style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;">
+                                <label for="locale" style="min-width:160px; font-weight:normal; margin:0; padding-top:5px;">Language</label>
+                                <div>
+                                    <select id="locale" name="locale" class="form-control input-sm" style="width:180px; margin-bottom:4px;">
+                                    {% for code, lname in locale_list %}
+                                        <option value="{{ code }}" {% if code == locale %}selected{% endif %}>{{ lname }}</option>
+                                    {% endfor %}
+                                    {% if custom_locale_list %}
+                                        <optgroup label="Custom">
+                                        {% for code, lname in custom_locale_list %}
+                                            <option value="{{ code }}" {% if code == locale %}selected{% endif %}>{{ lname }}</option>
+                                        {% endfor %}
+                                        </optgroup>
+                                    {% endif %}
+                                    </select>
+                                    <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                                        <div class="file-picker">
+                                            <label class="btn btn-default btn-xs" style="margin:0; font-weight:normal; cursor:pointer;">
+                                                Add<input name="locale_file" type="file" accept=".toml" style="display:none;">
+                                            </label>
+                                            <span class="file-msg" style="font-size:0.85em; color:#888; display:inline; margin-left:4px;"></span>
+                                        </div>
+                                        {% if locale in custom_locale_codes %}
+                                        <a href="/locale_delete" class="btn btn-default btn-xs">Delete</a>
+                                        {% endif %}
+                                        {% if custom_locale_list %}
+                                        <a href="/locale_delete_all" class="btn btn-default btn-xs">Delete All</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <hr style="margin:8px 0;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                <label for="label_style" style="min-width:160px; font-weight:normal; margin:0;">Label Style</label>
+                                <select id="label_style" name="label_style" class="form-control input-sm" style="width:180px;">
+                                    <option value="long"  {% if label_style == 'long'  %}selected{% endif %}>Long  (ex: EVENT)</option>
+                                    <option value="short" {% if label_style == 'short' %}selected{% endif %}>Short (ex: EV)</option>
+                                </select>
+                            </div>
+                            <hr style="margin:8px 0;">
+                            <div style="padding:4px 0; display:flex; align-items:center;">
+                                <span style="display:inline-block; min-width:130px;">Column titles:</span>
+                                <label style="font-weight:normal; min-width:70px;"><input type="checkbox" name="show_lane_header" value="1" {% if show_lane_header %}checked{% endif %}> Lane</label>
+                                <label style="font-weight:normal; min-width:70px;"><input type="checkbox" name="show_name_header" value="1" {% if show_name_header %}checked{% endif %}> Name</label>
+                                <label style="font-weight:normal; min-width:70px;"><input type="checkbox" name="show_club_header" value="1" {% if show_club_header %}checked{% endif %}> Club</label>
+                                <label style="font-weight:normal; min-width:70px;"><input type="checkbox" name="show_time_header" value="1" {% if show_time_header %}checked{% endif %}> Time</label>
+                                <label style="font-weight:normal; min-width:70px;"><input type="checkbox" name="show_delta_header" value="1" {% if show_delta_header %}checked{% endif %}> Diff</label>
+                                <label style="font-weight:normal;"><input type="checkbox" name="show_position_header" value="1" {% if show_position_header %}checked{% endif %}> Position</label>
+                            </div>
+                            <div style="padding:4px 0; display:flex; align-items:center;">
+                                <span style="display:inline-block; min-width:130px;">Columns shown:</span>
+                                <span style="min-width:70px;"></span>
+                                <label style="font-weight:normal; min-width:70px;"><input type="checkbox" name="show_name" value="1" {% if show_name %}checked{% endif %}> Name</label>
+                                <label style="font-weight:normal; min-width:70px;"><input type="checkbox" name="show_club" value="1" {% if show_club %}checked{% endif %}> Club</label>
+                                <span style="min-width:70px;"></span>
+                                <label style="font-weight:normal; min-width:70px;"><input type="checkbox" name="show_delta" value="1" {% if show_delta %}checked{% endif %}> Diff</label>
+                                <label style="font-weight:normal; min-width:70px;"><input type="checkbox" name="show_position" value="1" {% if show_position %}checked{% endif %}> Position</label>
+                            </div>
+                            <div style="padding:4px 0; display:flex; align-items:center;">
+                                <span style="display:inline-block; min-width:130px;">Features:</span>
+                                <label style="font-weight:normal; min-width:70px;"><input type="checkbox" name="show_podium" value="1" {% if show_podium %}checked{% endif %}> Podium colors</label>
+                            </div>
+                            <div style="padding:4px 0; display:flex; align-items:center;">
+                                <span style="display:inline-block; min-width:130px;">Results order:</span>
+                                <label style="font-weight:normal; min-width:100px;"><input type="radio" name="results_sort" value="lane" {% if results_sort == 'lane' %}checked{% endif %}> By lane</label>
+                                <label style="font-weight:normal; min-width:100px;"><input type="radio" name="results_sort" value="place" {% if results_sort == 'place' %}checked{% endif %}> By position</label>
+                            </div>
+                        </div>
+                        <div style="margin-left:14px; padding-top:20px;">
+                            <button id="btn-update-display" class="btn btn-default btn-sm" type="submit">Update</button>
+                        </div>
+                    </div>
+                </form>
+                <form id="splash-settings-form" action="/settings" method="POST" enctype="multipart/form-data" style="margin-top:10px;">
+                    <input type="hidden" name="splash_settings_submit" value="1">
+                    <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px;">
+                        <div style="margin-bottom:8px;">
+                            <label style="font-weight:normal;">Splash Screen</label>
+                            <select name="splash_url" class="form-control" style="margin-bottom:4px;" onchange="_fsubmit(this.form)">
+                                <option value="" {% if not splash_url %}selected{% endif %}>-- None --</option>
+                                {% for url in splash_url_list %}
+                                    <option value="{{ url }}" {% if url == splash_url %}selected{% endif %}>{{ url }}</option>
+                                {% endfor %}
+                            </select>
+                            <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap; overflow:hidden;">
+                                <div class="file-picker" style="flex-shrink:0;">
+                                    <label class="btn btn-default btn-xs" style="margin:0; font-weight:normal; cursor:pointer;">
+                                        Add Image<input name="splash_file" type="file" accept="image/*" style="display:none;" onchange="_fsubmit(this.closest('form'))">
+                                    </label>
+                                    <span class="file-msg" style="font-size:0.85em; color:#888; display:inline; margin-left:4px;"></span>
+                                </div>
+                                {% if splash_url %}
+                                <a href="/splash_delete" class="btn btn-default btn-xs danger" style="flex-shrink:0;" onclick="return confirm('Delete {{ splash_url }}?')">Delete</a>
+                                {% endif %}
+                                {% if splash_url_list %}
+                                <a href="/splash_delete_all" class="btn btn-default btn-xs danger" style="flex-shrink:0;" onclick="return confirm('Delete all splash images?')">Delete All</a>
+                                {% endif %}
+                                {% if splash_url %}
+                                <img src="{{ url_for('appearance.serve_image', filename=splash_url) }}" style="max-height:36px; max-width:72px; border-radius:3px; flex-shrink:0;"/>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div style="padding:4px 0; display:flex; align-items:center; gap:8px;">
+                            <label style="min-width:160px; font-weight:normal; margin:0;">Carousel interval</label>
+                            <input type="number" name="carousel_interval" value="{{ carousel_interval }}" min="3" max="300" step="1"
+                                   class="form-control input-sm" style="width:80px;" onchange="_fsubmit(this.form)">
+                            <span style="color:#888;">seconds per slide</span>
+                        </div>
+                    </div>
+                </form></div></div>
+                </div>
+
+                <!-- ── Theme ───────────────────────────────────────────────── -->
+                <div class="tab-pane" id="tab-theme">
+                <div class="row"><div class="col-lg-8">
+                    <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px; display:flex;">
+                        <div style="flex:1;">
+                            <form id="theme_update_form" action="/settings" method="POST" enctype="multipart/form-data">
+                                <input type="hidden" name="theme_update_submit" value="1">
+                                <div style="display:flex; gap:12px; margin-bottom:4px;">
+                                    <div style="flex:1;">
+                                        <label for="theme_select" style="font-weight:normal;">Theme</label>
+                                        <select id="theme_select" name="theme_select" class="form-control" style="margin-bottom:4px;">
+                                        {% for code, tname in theme_list %}
+                                            <option value="{{ code }}" {% if code == active_theme %}selected{% endif %}>{{ tname }}</option>
+                                        {% endfor %}
+                                        {% if custom_theme_list %}
+                                            <optgroup label="Custom">
+                                            {% for code, tname in custom_theme_list %}
+                                                <option value="{{ code }}" {% if code == active_theme %}selected{% endif %}>{{ tname }}</option>
+                                            {% endfor %}
+                                            </optgroup>
+                                        {% endif %}
+                                        </select>
+                                        <div style="display:flex; gap:4px;">
+                                            {% if active_theme in custom_theme_codes %}
+                                            <a href="/theme_delete" class="btn btn-default btn-xs">Delete</a>
+                                            {% endif %}
+                                            {% if custom_theme_list %}
+                                            <a href="/theme_delete_all" class="btn btn-default btn-xs">Delete All Customs</a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div style="flex:1;">
+                                        <label style="visibility:hidden;">.</label>
+                                        <div style="display:flex; gap:4px; align-items:flex-start;">
+                                            <div class="file-picker">
+                                                <label class="btn btn-default btn-sm" style="margin:0; font-weight:normal; cursor:pointer;">
+                                                    Add Theme<input name="theme_file" type="file" accept=".toml" style="display:none;">
+                                                </label>
+                                                <span class="file-msg" style="font-size:0.85em; color:#888; display:block; margin-top:4px;"></span>
+                                            </div>
+                                            <button type="button" class="btn btn-default btn-sm" onclick="saveCustomTheme()">Save custom</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr style="margin:8px 0;">
+                                <div style="font-weight:bold; margin-bottom:8px;">Custom overrides</div>
+                                <div style="display:flex; align-items:center; margin-bottom:6px;">
+                                    <span style="min-width:120px; font-size:0.9em; color:#555; flex-shrink:0;">Background</span>
+                                    <label style="font-weight:normal; font-size:0.9em; min-width:130px;"><input type="color" name="color_bg" value="{{ theme_colors.bg }}"> Background</label>
+                                </div>
+                                <hr style="margin:6px 0;">
+                                <div style="display:flex; align-items:center; margin-bottom:6px;">
+                                    <span style="min-width:120px; font-size:0.9em; color:#555; flex-shrink:0;">Header bar</span>
+                                    <label style="font-weight:normal; font-size:0.9em; min-width:130px;"><input type="color" name="color_header_bg" value="{{ theme_colors.header_bg }}"> Background</label>
+                                    <label style="font-weight:normal; font-size:0.9em; min-width:130px;"><input type="color" name="color_header_border" value="{{ theme_colors.header_border }}"> Border</label>
+                                    <label style="font-weight:normal; font-size:0.9em; min-width:130px;"><input type="color" name="color_header_label" value="{{ theme_colors.header_label }}"> Label</label>
+                                    <label style="font-weight:normal; font-size:0.9em;"><input type="color" name="color_header_value" value="{{ theme_colors.header_value }}"> Value</label>
+                                </div>
+                                <div style="display:flex; align-items:center; margin-bottom:6px;">
+                                    <span style="min-width:120px; font-size:0.9em; color:#555; flex-shrink:0;">Table header</span>
+                                    <label style="font-weight:normal; font-size:0.9em; min-width:130px;"><input type="color" name="color_th_bg" value="{{ theme_colors.th_bg }}"> Background</label>
+                                    <label style="font-weight:normal; font-size:0.9em;"><input type="color" name="color_th_text" value="{{ theme_colors.th_text }}"> Text</label>
+                                </div>
+                                <div style="display:flex; align-items:center; margin-bottom:6px;">
+                                    <span style="min-width:120px; font-size:0.9em; color:#555; flex-shrink:0;">Rows</span>
+                                    <label style="font-weight:normal; font-size:0.9em; min-width:130px;"><input type="color" name="color_row_odd" value="{{ theme_colors.row_odd }}"> Odd</label>
+                                    <label style="font-weight:normal; font-size:0.9em; min-width:130px;"><input type="color" name="color_row_even" value="{{ theme_colors.row_even }}"> Even</label>
+                                    <label style="font-weight:normal; font-size:0.9em;"><input type="color" name="color_row_text" value="{{ theme_colors.row_text }}"> Text</label>
+                                </div>
+                                <hr style="margin:6px 0;">
+                                <div style="display:flex; align-items:center; margin-bottom:6px;">
+                                    <span style="min-width:120px; font-size:0.9em; color:#555; flex-shrink:0;">Timing</span>
+                                    <label style="font-weight:normal; font-size:0.9em; min-width:130px;"><input type="color" name="color_time" value="{{ theme_colors.time }}"> Time</label>
+                                    <label style="font-weight:normal; font-size:0.9em; min-width:130px;"><input type="color" name="color_delta_better" value="{{ theme_colors.delta_better }}"> Faster</label>
+                                    <label style="font-weight:normal; font-size:0.9em;"><input type="color" name="color_delta_worse" value="{{ theme_colors.delta_worse }}"> Slower</label>
+                                </div>
+                                <div style="display:flex; align-items:center; margin-bottom:6px;">
+                                    <span style="min-width:120px; font-size:0.9em; color:#555; flex-shrink:0;">Podium</span>
+                                    <label style="font-weight:normal; font-size:0.9em; min-width:130px;"><input type="color" name="color_podium_gold" value="{{ theme_colors.podium_gold }}"> Gold</label>
+                                    <label style="font-weight:normal; font-size:0.9em; min-width:130px;"><input type="color" name="color_podium_silver" value="{{ theme_colors.podium_silver }}"> Silver</label>
+                                    <label style="font-weight:normal; font-size:0.9em;"><input type="color" name="color_podium_bronze" value="{{ theme_colors.podium_bronze }}"> Bronze</label>
+                                </div>
+                                <hr style="margin:6px 0;">
+                                <div style="font-size:0.8em; color:#555; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px;">Schedule</div>
+                                <div style="display:flex; align-items:center; margin-bottom:6px;">
+                                    <span style="min-width:120px; font-size:0.9em; color:#555; flex-shrink:0;">Event / Heat</span>
+                                    <label style="font-weight:normal; font-size:0.9em;"><input type="color" name="color_schedule_event" value="{{ theme_colors.schedule_event }}"> Text</label>
+                                </div>
+                                <div style="display:flex; align-items:center; margin-bottom:6px;">
+                                    <span style="min-width:120px; font-size:0.9em; color:#555; flex-shrink:0;">Time</span>
+                                    <label style="font-weight:normal; font-size:0.9em;"><input type="color" name="color_schedule_time" value="{{ theme_colors.schedule_time }}"> Text</label>
+                                </div>
+                                <div style="display:flex; align-items:center; margin-bottom:6px;">
+                                    <span style="min-width:120px; font-size:0.9em; color:#555; flex-shrink:0;">Swimmer</span>
+                                    <label style="font-weight:normal; font-size:0.9em; min-width:130px;"><input type="color" name="color_schedule_name" value="{{ theme_colors.schedule_name }}"> Name</label>
+                                    <label style="font-weight:normal; font-size:0.9em;"><input type="color" name="color_schedule_club" value="{{ theme_colors.schedule_club }}"> Club</label>
+                                </div>
+                                <hr style="margin:6px 0;">
+                                <div style="display:flex; gap:12px; margin-bottom:4px;">
+                                    <div style="flex:1;">
+                                        <label style="font-weight:normal;">Font</label>
+                                        <select name="font_family" id="sel-font-family" class="form-control" onchange="updateFontPreview(this,'prev-font-family')">
+                                            <option value="Overpass Mono"   {% if theme_fonts.family == 'Overpass Mono'   %}selected{% endif %}>Overpass Mono</option>
+                                            <option value="Roboto Mono"     {% if theme_fonts.family == 'Roboto Mono'     %}selected{% endif %}>Roboto Mono</option>
+                                            <option value="Share Tech Mono" {% if theme_fonts.family == 'Share Tech Mono' %}selected{% endif %}>Share Tech Mono</option>
+                                            <option value="Orbitron"        {% if theme_fonts.family == 'Orbitron'        %}selected{% endif %}>Orbitron</option>
+                                            <option value="Arial"           {% if theme_fonts.family == 'Arial'           %}selected{% endif %}>Arial</option>
+                                            <option value="Helvetica"       {% if theme_fonts.family == 'Helvetica'       %}selected{% endif %}>Helvetica</option>
+                                            <option value="Courier New"     {% if theme_fonts.family == 'Courier New'     %}selected{% endif %}>Courier New</option>
+                                            <option value="monospace"       {% if theme_fonts.family == 'monospace'       %}selected{% endif %}>monospace</option>
+                                        </select>
+                                        <div id="prev-font-family" style="font-family:var(--font-family),monospace; margin-top:4px; padding:3px 8px; background:var(--color-row-odd); border:1px solid #2e2e2e; border-radius:3px; font-size:1em; color:var(--color-row-text); white-space:nowrap; overflow:hidden;">0:58.21 — Tremblay Sophie</div>
+                                    </div>
+                                    <div style="flex:1;">
+                                        <label style="font-weight:normal;">Digit Font</label>
+                                        <select name="font_digits" id="sel-font-digits" class="form-control" onchange="updateFontPreview(this,'prev-font-digits')">
+                                            <option value="DSEG7Classic"    {% if theme_fonts.digits == 'DSEG7Classic'    %}selected{% endif %}>DSEG7Classic</option>
+                                            <option value="DSEG14Classic"   {% if theme_fonts.digits == 'DSEG14Classic'   %}selected{% endif %}>DSEG14Classic</option>
+                                            <option value="Overpass Mono"   {% if theme_fonts.digits == 'Overpass Mono'   %}selected{% endif %}>Overpass Mono</option>
+                                            <option value="Roboto Mono"     {% if theme_fonts.digits == 'Roboto Mono'     %}selected{% endif %}>Roboto Mono</option>
+                                            <option value="Share Tech Mono" {% if theme_fonts.digits == 'Share Tech Mono' %}selected{% endif %}>Share Tech Mono</option>
+                                            <option value="Orbitron"        {% if theme_fonts.digits == 'Orbitron'        %}selected{% endif %}>Orbitron</option>
+                                            <option value="Arial"           {% if theme_fonts.digits == 'Arial'           %}selected{% endif %}>Arial</option>
+                                            <option value="monospace"       {% if theme_fonts.digits == 'monospace'       %}selected{% endif %}>monospace</option>
+                                        </select>
+                                        <div id="prev-font-digits" style="font-family:var(--font-digits),monospace; margin-top:4px; padding:3px 8px; background:var(--color-row-odd); border:1px solid #2e2e2e; border-radius:3px; font-size:1em; color:var(--color-time); white-space:nowrap; overflow:hidden;">1:02.34</div>
+                                    </div>
+                                    <div style="flex:1;">
+                                        <label style="font-weight:normal;">Timing Font</label>
+                                        <select name="font_timing" id="sel-font-timing" class="form-control" onchange="updateFontPreview(this,'prev-font-timing')">
+                                            <option value="DSEG7Classic"    {% if theme_fonts.timing == 'DSEG7Classic'    %}selected{% endif %}>DSEG7Classic</option>
+                                            <option value="DSEG14Classic"   {% if theme_fonts.timing == 'DSEG14Classic'   %}selected{% endif %}>DSEG14Classic</option>
+                                            <option value="Overpass Mono"   {% if theme_fonts.timing == 'Overpass Mono'   %}selected{% endif %}>Overpass Mono</option>
+                                            <option value="Share Tech Mono" {% if theme_fonts.timing == 'Share Tech Mono' %}selected{% endif %}>Share Tech Mono</option>
+                                            <option value="Roboto Mono"     {% if theme_fonts.timing == 'Roboto Mono'     %}selected{% endif %}>Roboto Mono</option>
+                                        </select>
+                                        <div id="prev-font-timing" style="font-family:var(--font-timing),monospace; margin-top:4px; padding:3px 8px; background:var(--color-row-odd); border:1px solid #2e2e2e; border-radius:3px; font-size:1em; color:var(--color-time); white-space:nowrap; overflow:hidden;">18:34.56  +1:23.45</div>
+                                    </div>
+                                </div>
+                            </form>
+                            <form id="theme_save_form" action="/settings" method="POST" style="display:none;">
+                                <input type="hidden" name="theme_save_submit" value="1">
+                                <input type="hidden" id="theme_save_name" name="theme_name" value="">
+                            </form>
+                        </div>
+                        <div style="margin-left:14px; padding-top:20px;">
+                            <button id="btn-update-theme" class="btn btn-default btn-sm" form="theme_update_form" type="submit">Update</button>
+                        </div>
+                    </div>
+                </div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Network group ──────────────────────────────────────────── -->
+        <div class="tab-pane" id="tab-netgroup">
+            <ul class="nav nav-tabs" style="margin-bottom:16px;">
+                <li class="active"><a href="#tab-network" data-toggle="tab">Local</a></li>
+                <li><a href="#tab-cloud" data-toggle="tab">Cloud</a></li>
+            </ul>
+            <div class="tab-content">
+                <!-- ── Network ─────────────────────────────────────────────── -->
+                <div class="tab-pane active" id="tab-network">
+                <div class="row"><div class="col-lg-8">
+                    <!-- Status block -->
+                    <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px; margin-bottom:10px;">
+                        <div style="font-weight:bold; margin-bottom:6px; font-size:0.9em;">Status</div>
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+                            <span style="font-size:0.9em; color:#555; min-width:70px;">Ethernet</span>
+                            <span id="eth-ip-text" style="font-size:0.9em; flex:1;"></span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:0.9em; color:#555; min-width:70px;">WiFi</span>
+                            <span id="wifi-status-text" style="font-size:0.9em; flex:1;"></span>
+                            <button id="btn-wifi-toggle" class="btn btn-default btn-sm" onclick="toggleWifi()" disabled style="white-space:nowrap;">…</button>
+                        </div>
+                    </div>
+
+                    <!-- Ethernet block -->
+                    <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px; margin-bottom:10px;">
+                        <div style="font-size:0.9em; font-weight:bold; margin-bottom:6px;">Ethernet Static IP</div>
+                        <div style="display:flex; gap:4px; align-items:center; margin-bottom:6px;">
+                            <input id="eth-ip-input" type="text" class="form-control input-sm"
+                                   placeholder="10.10.10.10" maxlength="15" style="width:140px; flex:none;">
+                            <span style="font-size:0.9em; color:#888;">/</span>
+                            <input id="eth-prefix-input" type="number" class="form-control input-sm"
+                                   value="24" min="1" max="32" style="width:60px; flex:none;">
+                            <button class="btn btn-default btn-xs" style="width:80px;" onclick="setEthIp()">Static</button>
+                            <button class="btn btn-default btn-xs" style="width:80px;" onclick="setEthDhcp()">DHCP</button>
+                        </div>
+                        <div id="eth-ip-status" style="font-size:0.85em; margin-bottom:4px;"></div>
+                        <div style="font-size:0.82em; color:#a07020;">⚠ Applying will disconnect your current session.</div>
+                    </div>
+
+                    <!-- WiFi block -->
+                    <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px;">
+
+                        <!-- Network list -->
+                        <div style="display:flex; align-items:center; margin-bottom:6px;">
+                            <span style="font-size:0.9em; font-weight:bold; flex:1;">WiFi Networks</span>
+                            <div style="min-width:110px; text-align:center;">
+                                <button class="btn btn-default btn-xs" onclick="scanWifi()" style="width:80px;">Scan</button>
+                            </div>
+                        </div>
+                        <div id="wifi-net-list" style="font-size:0.9em; color:#888; min-height:32px;">Click Scan to search for networks.</div>
+
+                        <hr style="margin:8px 0;">
+
+                        <!-- Connected clients -->
+                        <div style="display:flex; align-items:center; margin-bottom:6px;">
+                            <span style="font-size:0.9em; font-weight:bold;">Connected Clients</span>
+                            <span style="flex:1;"></span>
+                            <div style="min-width:110px; text-align:center;">
+                                <button class="btn btn-default btn-xs" onclick="loadClients()" style="width:80px;">Refresh</button>
+                            </div>
+                        </div>
+                        <div id="client-list" style="font-size:0.9em; min-height:32px; color:#888;">—</div>
+
+                        <!-- Inline connect form -->
+                        <div id="wifi-join-form" style="display:none; margin-top:8px; padding:8px; background:#e8e8e8; border-radius:3px;">
+                            <div style="font-weight:bold; margin-bottom:6px;" id="wifi-join-ssid"></div>
+                            <form style="display:flex; gap:4px; flex-wrap:wrap;" onsubmit="connectWifi(); return false;">
+                                <input type="password" id="wifi-join-pw" class="form-control input-sm"
+                                       autocomplete="current-password" placeholder="Password" style="flex:1; min-width:120px;"
+                                       onkeydown="if(event.key==='Enter') connectWifi();">
+                                <button class="btn btn-primary btn-sm" onclick="connectWifi()">Connect</button>
+                                <button class="btn btn-default btn-sm" onclick="cancelJoin()">Cancel</button>
+                            </form>
+                            <div id="wifi-join-status" style="margin-top:4px; font-size:0.85em;"></div>
+                        </div>
+
+                    </div>
+                </div></div>
+                </div>
+
+                <!-- ── Cloud tab ─────────────────────────────────────────────── -->
+                <div class="tab-pane" id="tab-cloud">
+                    <form action="/settings" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="cloud_settings_submit" value="1">
+                    <div class="row"><div class="col-md-6">
+                        <div style="background:#1a1a1a; border-radius:6px; padding:14px 18px; margin-bottom:16px;">
+                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                                <span style="font-size:0.9em; color:#888; min-width:70px;">Status</span>
+                                <span id="cloud-status-text" style="font-size:0.9em; flex:1;"></span>
+                                <button id="btn-cloud-toggle" class="btn btn-default btn-sm" onclick="toggleCloud(); return false;" disabled style="white-space:nowrap;">…</button>
+                            </div>
+                            <div class="form-group" style="margin-bottom:10px;">
+                                <label style="font-weight:normal; font-size:0.88em; color:#888;">Server URL</label>
+                                <input type="url" name="cloud_relay_url" value="{{ cloud_relay_url }}"
+                                       class="form-control" placeholder="https://scores.example.com">
+                                <span style="font-size:0.78em; color:#555;">URL of your cloud server (leave empty to disable)</span>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label style="font-weight:normal; font-size:0.88em; color:#888;">Relay Key</label>
+                                <input type="password" name="cloud_relay_key" value="{{ cloud_relay_key }}"
+                                       class="form-control" placeholder="Paste key from cloud admin">
+                            </div>
+                        </div>
+                        <div style="background:#1a1a1a; border-radius:6px; padding:14px 18px; margin-bottom:16px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                <span style="font-size:0.9em; font-weight:bold;">Meet Info (shown on picker)</span>
+                                <button id="btn-update-cloud" type="submit" class="btn btn-default btn-sm">Update</button>
+                            </div>
+                            <div class="form-group" style="margin-bottom:10px;">
+                                <label style="font-weight:normal; font-size:0.88em; color:#888;">Location <small style="color:#555;">(auto-filled from Lenex if blank)</small></label>
+                                <input type="text" name="meet_location" value="{{ meet_location }}"
+                                       class="form-control" placeholder="City or venue name">
+                            </div>
+                            <div class="form-group" style="margin-bottom:10px;">
+                                <label style="font-weight:normal; font-size:0.88em; color:#888;">Sport <small style="color:#555;">(optional)</small></label>
+                                <input type="text" name="meet_sport" value="{{ meet_sport }}"
+                                       class="form-control" placeholder="e.g. Swimming">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label style="font-weight:normal; font-size:0.88em; color:#888;">Column label style</label>
+                                <select name="cloud_label_style" class="form-control" onchange="_fsubmit(this.closest('form'))">
+                                    <option value="short" {% if cloud_label_style == 'short' %}selected{% endif %}>Short (EV, HT, LN…)</option>
+                                    <option value="long"  {% if cloud_label_style == 'long'  %}selected{% endif %}>Long (EVENT, HEAT, LANE…)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="background:#1a1a1a; border-radius:6px; padding:18px; margin-bottom:16px;">
+                            <div style="font-size:0.9em; font-weight:bold; margin-bottom:6px;">Home Screen Icon</div>
+                            <p style="font-size:0.82em; color:#666; margin-bottom:10px;">Shown when attendees add the scoreboard to their iOS or Android home screen. Must be a square PNG, 512×512 or 1024×1024 px.</p>
+                            {% if icon_error %}
+                            <p style="color:#f66; font-size:0.82em; margin-bottom:8px;">{{ icon_error }}</p>
+                            {% endif %}
+                            <select name="selected_home_icon" class="form-control" style="margin-bottom:4px;" onchange="_fsubmit(this.closest('form'))">
+                                <option value="" {% if not active_home_icon %}selected{% endif %}>— None —</option>
+                                {% for icon in icon_list %}
+                                <option value="{{ icon }}" {% if icon == active_home_icon %}selected{% endif %}>{{ icon }}</option>
+                                {% endfor %}
+                            </select>
+                            <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap; overflow:hidden;">
+                                <div class="file-picker" style="flex-shrink:0;">
+                                    <label class="btn btn-default btn-xs" style="margin:0; font-weight:normal; cursor:pointer;">
+                                        Add Icon
+                                        <input type="file" name="home_icon" accept="image/png" style="display:none;"
+                                               onchange="var m=this.closest('.file-picker').querySelector('.file-msg');m.style.opacity='1';m.style.transition='none';m.textContent='Resizing…';_fsubmit(this.closest('form'))">
+                                    </label>
+                                    <span class="file-msg" style="font-size:0.85em; color:#888; display:inline; margin-left:4px;"></span>
+                                </div>
+                                {% if active_home_icon %}
+                                <a href="/icon_delete?file={{ active_home_icon }}" class="btn btn-default btn-xs danger" style="flex-shrink:0;" onclick="return confirm('Delete {{ active_home_icon }}?')">Delete</a>
+                                {% endif %}
+                                {% if icon_list %}
+                                <a href="/icon_delete_all" class="btn btn-default btn-xs danger" style="flex-shrink:0;" onclick="return confirm('Delete all icons?')">Delete All</a>
+                                {% endif %}
+                                {% if has_home_icon %}
+                                <img src="/home_icon" style="height:28px; width:28px; border-radius:6px; border:1px solid #333; flex-shrink:0;">
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Debug group ────────────────────────────────────────────── -->
+        <div class="tab-pane" id="tab-devtools">
+            <ul class="nav nav-tabs" style="margin-bottom:16px;">
+                <li class="active"><a href="#tab-test" data-toggle="tab">Test</a></li>
+                <li><a href="#tab-terminal" data-toggle="tab">Terminal</a></li>
+            </ul>
+            <div class="tab-content">
+                <!-- ── Test ─────────────────────────────────────────────────── -->
+                <div class="tab-pane active" id="tab-test">
+                <div class="row"><div class="col-lg-8">
+                    <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px;">
+
+                        <!-- Playback status bar -->
+                        <div id="test-status-bar" style="display:none; margin-bottom:8px; align-items:center; gap:8px;">
+                            <span id="test-status-text" style="font-size:0.9em; color:#555; flex:1;"></span>
+                            <button class="btn btn-danger btn-xs" style="width:70px;" onclick="testStop()">Stop</button>
+                        </div>
+
+                        <hr id="test-status-hr" style="display:none; margin:8px 0;">
+
+                        <!-- Meet-loaded warning -->
+                        <div id="test-has-meet-warning" style="display:none; font-size:0.85em; color:#a67c00; background:#fff8e1; border:1px solid #ffe082; border-radius:3px; padding:5px 10px; margin-bottom:8px;">
+                            A meet file is loaded — go to Meet Setup and click <strong>Delete</strong> before running test sessions.
+                        </div>
+
+                        <!-- Session list -->
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <span style="font-size:0.9em; font-weight:bold;">Recorded Sessions</span>
+                            <div class="file-picker">
+                                <label class="btn btn-default btn-xs" style="margin:0; font-weight:normal; cursor:pointer; width:70px; text-align:center;">
+                                    Upload<input type="file" accept=".cts" style="display:none;"
+                                        onchange="testUpload(this)">
+                                </label>
+                            </div>
+                        </div>
+                        <div id="test-session-list" style="font-size:0.9em; color:#888; min-height:32px;">Loading…</div>
+
+                        <hr style="margin:8px 0;">
+
+                        <!-- Speed -->
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                            <span style="font-size:0.9em; font-weight:bold; min-width:110px;">Playback Speed</span>
+                            <div style="display:flex; gap:4px;">
+                                <button class="btn btn-default btn-xs speed-btn" onclick="setSpeed(1)">1×</button>
+                                <button class="btn btn-default btn-xs speed-btn" onclick="setSpeed(2)">2×</button>
+                                <button class="btn btn-default btn-xs speed-btn" onclick="setSpeed(4)">4×</button>
+                                <button class="btn btn-default btn-xs speed-btn" onclick="setSpeed(10)">10×</button>
+                            </div>
+                        </div>
+
+                        <hr style="margin:8px 0;">
+
+                        <!-- Record -->
+                        <div style="font-size:0.9em; font-weight:bold; margin-bottom:6px;">Record Live Session</div>
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <input id="test-record-name" type="text" class="form-control input-sm"
+                                   placeholder="Session name" style="flex:1;">
+                            <button id="btn-record" class="btn btn-default btn-xs" style="width:70px;" onclick="testRecordToggle()">Start</button>
+                            <span id="test-record-status" style="font-size:0.9em; color:#888;"></span>
+                        </div>
+
+                        <!-- Test meet file — only shown when test is playing and no real meet is loaded -->
+                        <div id="test-meet-section" style="display:none;">
+                            <hr style="margin:8px 0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <span style="font-size:0.9em; font-weight:bold;">Meet File</span>
+                                <div id="test-meet-upload-btn">
+                                    <label class="btn btn-default btn-xs" style="margin:0; font-weight:normal; cursor:pointer; width:70px; text-align:center;">
+                                        Load<input type="file" accept=".csv,.lxf" style="display:none;" onchange="testMeetUpload(this)">
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="test-meet-status" style="font-size:0.85em; color:#888;">No meet file loaded — load one to show swimmer names during the test.</div>
+                        </div>
+
+                    </div>
+                </div></div>
+                </div>
+
+                <!-- ── Terminal ──────────────────────────────────────────── -->
+                <div class="tab-pane" id="tab-terminal">
+                    <div style="background:#1a1a1a; border-radius:4px; padding:8px 12px; max-width:860px;">
+                        <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
+                            <button class="btn btn-default btn-xs" onclick="termLaunch('bash')">Shell</button>
+                            <button class="btn btn-default btn-xs" onclick="termLaunch('raspi-config')">raspi-config</button>
+                            <button class="btn btn-default btn-xs" onclick="termLaunch('logs')">Scoreboard logs</button>
+                            <button class="btn btn-default btn-xs" onclick="termLaunch('dmesg-tty')">dmesg tty</button>
+                            <button class="btn btn-default btn-xs" onclick="termLaunch('serial-ports')">Serial ports</button>
+                            <span style="flex:1;"></span>
+                            <button id="btn-term-stop" class="btn btn-danger btn-xs" style="display:none;" onclick="termStop()">Stop</button>
+                        </div>
+                        <div id="terminal-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- tab-content -->
+</div>
+    <script src="/static/js/jquery-1.12.4.min.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
+    <script src="/static/js/socket.io.min.js"></script>
+    <script>
+    // ── Restore tab + flash button after form submit ──────────────────────────
+    // Deferred so all tab-init functions are defined first
+    function _refreshMeetTab() {
+        fetch('/meet_status').then(function(r){ return r.json(); }).then(function(d){
+            var sel = document.getElementById('meet-file-select');
+            if (sel) {
+                sel.innerHTML = '<option value="">— No file loaded —</option>';
+                (d.file_list || []).forEach(function(f) {
+                    var opt = document.createElement('option');
+                    opt.value = f; opt.textContent = f;
+                    if (f === d.active) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+                if (!d.active) sel.value = '';
+                var loadBtn = sel.parentElement.querySelector('button[name="meet_file_load_submit"]');
+                if (loadBtn) loadBtn.disabled = !(d.file_list && d.file_list.length);
+            }
+            var actions = document.getElementById('meet-file-actions');
+            if (d.active) {
+                actions.innerHTML =
+                    '<a id="meet-preview-btn" href="' + d.preview_url + '" class="btn btn-default btn-xs" style="flex-shrink:0;">Preview</a>' +
+                    '<button class="btn btn-default btn-xs danger" type="button" style="flex-shrink:0;" onclick="var f=document.getElementById(\'meet-file-select\').value;if(f&&confirm(\'Delete \'+f+\'?\'))location.href=\'/meet_delete?file=\'+encodeURIComponent(f);">Delete</button>' +
+                    '<button class="btn btn-default btn-xs danger" type="button" style="flex-shrink:0;" onclick="if(confirm(\'Delete all meet files?\'))location.href=\'/meet_clear\';">Delete All</button>';
+            } else {
+                actions.innerHTML = '';
+            }
+            var warn  = document.getElementById('meet-test-warning');
+            var input = document.getElementById('meet_file');
+            var label = document.querySelector('#tab-meet .file-picker label');
+            warn.style.display  = d.playing ? '' : 'none';
+            input.disabled      = d.playing;
+            if (label) label.style.opacity = d.playing ? '0.5' : '';
+        });
+    }
+
+    function _tabInitFor(tabHref) {
+        var fns = {
+            '#tab-meet':    _refreshMeetTab,
+            '#tab-test':    function(){
+                _loadTestStatus();
+                _ensureUpdateSock();
+                _updateSock.off('test_status').on('test_status', _loadTestStatus);
+            },
+            '#tab-network': function(){ _netTabActive(); loadClients(); },
+            '#tab-netgroup':  function() { _netTabActive(); loadClients(); },
+            '#tab-time':    function(){ _loadTimeStatus(); },
+            '#tab-update':  function(){ loadVersions(); },
+            '#tab-debug':   function(){ _loadXterm && _loadXterm(function(){}); fetch('/debug_status').then(function(r){return r.json();}).then(function(d){_applyDebugState(d.enabled);}); },
+        };
+        if (fns[tabHref]) fns[tabHref]();
+    }
+
+    function _switchTab(tabHref) {
+        var pane = document.querySelector(tabHref);
+        var link = document.querySelector('[href="' + tabHref + '"]');
+        if (!pane || !link) return;
+        var container = pane.parentElement;
+        var nav = link.closest('.nav-tabs');
+        container.querySelectorAll(':scope > .tab-pane').forEach(function(p) { p.classList.remove('active'); });
+        nav.querySelectorAll(':scope > li').forEach(function(li) { li.classList.remove('active'); });
+        pane.classList.add('active');
+        link.parentElement.classList.add('active');
+    }
+
+    (function() {
+        var state = JSON.parse(localStorage.getItem('cts_tab_restore') || 'null');
+        if (!state) return;
+        localStorage.removeItem('cts_tab_restore');
+        if (state.tab) {
+            _switchTab(state.tab);
+            setTimeout(function(){ _tabInitFor(state.tab); }, 0);
+        }
+        if (state.nested) {
+            _switchTab(state.nested);
+        }
+        if (state.btn) {
+            var btn = document.getElementById(state.btn);
+            if (btn) {
+                btn.classList.remove('btn-default', 'btn-warning');
+                btn.classList.add('btn-success');
+                setTimeout(function() {
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-default');
+                }, 2500);
+            }
+        }
+    })();
+
+    document.querySelectorAll('.nav-tabs a').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            var pane = document.querySelector(link.getAttribute('href'));
+            var nav = link.closest('.nav-tabs');
+            var container = pane.parentElement;
+            container.querySelectorAll(':scope > .tab-pane').forEach(function(p) { p.classList.remove('active'); });
+            nav.querySelectorAll(':scope > li').forEach(function(li) { li.classList.remove('active'); });
+            pane.classList.add('active');
+            link.parentElement.classList.add('active');
+        });
+    });
+
+    // Save active tab + button ID before any settings form submits
+    document.querySelectorAll('form[action="/settings"]').forEach(function(form) {
+        form.addEventListener('submit', function() {
+            var activeLink = document.querySelector('.nav-tabs li.active a');
+            var nestedLink = null;
+            if (activeLink) {
+                var activePane = document.querySelector(activeLink.getAttribute('href'));
+                if (activePane) {
+                    var nl = activePane.querySelector('.nav-tabs li.active a');
+                    if (nl) nestedLink = nl;
+                }
+            }
+            var btn = form.querySelector('[type="submit"]');
+            if (!btn && form.id)
+                btn = document.querySelector('[form="' + form.id + '"][type="submit"]');
+            localStorage.setItem('cts_tab_restore', JSON.stringify({
+                tab:    activeLink  ? activeLink.getAttribute('href')  : null,
+                nested: nestedLink  ? nestedLink.getAttribute('href')  : null,
+                btn:    btn ? btn.id : null
+            }));
+        });
+    });
+    function _fsubmit(f) { if (f.requestSubmit) f.requestSubmit(); else f.submit(); }
+
+    function markDirty(tabId, btnId) {
+        document.querySelectorAll('#' + tabId + ' input, #' + tabId + ' select').forEach(function(el) {
+            ['input', 'change'].forEach(function(evt) {
+                el.addEventListener(evt, function() {
+                    var btn = document.getElementById(btnId);
+                    btn.classList.remove('btn-default');
+                    btn.classList.add('btn-warning');
+                });
+            });
+        });
+    }
+    markDirty('tab-flow',    'btn-update-flow');
+    markDirty('tab-cloud',   'btn-update-cloud');
+    markDirty('display-settings-form', 'btn-update-display');
+    markDirty('tab-meet',    'btn-update-meet');
+    markDirty('tab-account', 'btn-update-account');
+    markDirty('tab-theme', 'btn-update-theme');
+
+    // ── Test tab ─────────────────────────────────────────────────────────────
+    var _recording = false;
+
+    function _loadTestStatus() {
+        fetch('/test_status').then(function(r){ return r.json(); }).then(function(d){
+            var bar  = document.getElementById('test-status-bar');
+            var hr   = document.getElementById('test-status-hr');
+            var text = document.getElementById('test-status-text');
+            if (d.playing) {
+                bar.style.display = 'flex';
+                hr.style.display  = '';
+                text.textContent  = 'Playing: ' + d.session;
+            } else {
+                bar.style.display = 'none';
+                hr.style.display  = 'none';
+                text.textContent  = '';
+            }
+            if (d.speed !== undefined) _highlightSpeed(d.speed);
+            _recording = d.recording;
+            var btn = document.getElementById('btn-record');
+            btn.textContent = _recording ? 'Stop' : 'Start';
+            btn.className   = _recording ? 'btn btn-danger btn-sm' : 'btn btn-default btn-sm';
+            btn.disabled    = d.playing;
+            document.getElementById('test-record-name').disabled = d.playing;
+            document.getElementById('test-record-status').textContent = _recording ? '● Recording' : '';
+            document.getElementById('test-has-meet-warning').style.display = d.has_meet ? '' : 'none';
+            _renderSessions(d.sessions, d.playing, d.has_meet);
+
+            // Test meet section
+            var meetSection   = document.getElementById('test-meet-section');
+            var meetStatus    = document.getElementById('test-meet-status');
+            var meetUploadBtn = document.getElementById('test-meet-upload-btn');
+            if (d.playing && !d.has_meet) {
+                if (d.test_meet) {
+                    meetSection.style.display = '';
+                    meetStatus.textContent = '● Test meet loaded: ' + d.test_meet_name;
+                    meetStatus.style.color = '#5a5';
+                    meetUploadBtn.style.display = 'none';
+                } else {
+                    // Only show manual upload for custom sessions (built-ins auto-load their companion)
+                    var isBuiltin = d.sessions.some(function(s){ return s.name === d.session && s.source === 'builtin'; });
+                    meetSection.style.display = isBuiltin ? 'none' : '';
+                    meetStatus.textContent = 'No meet file loaded — load one to show swimmer names during the test.';
+                    meetStatus.style.color = '#888';
+                    meetUploadBtn.style.display = '';
+                }
+            } else {
+                meetSection.style.display = 'none';
+            }
+
+            // Meet Setup tab warning
+            var testPlaying = d.playing;
+            document.getElementById('meet-test-warning').style.display = testPlaying ? '' : 'none';
+            document.getElementById('meet_file').disabled = testPlaying;
+            var meetFileLabel = document.querySelector('label[for="meet_file_label"], #tab-meet .file-picker label');
+            if (meetFileLabel) meetFileLabel.style.opacity = testPlaying ? '0.5' : '';
+        });
+    }
+
+    function _renderSessions(sessions, anyPlaying, hasMeet) {
+        var div = document.getElementById('test-session-list');
+        if (!sessions.length) { div.innerHTML = '<span style="color:#888;">No sessions found.</span>'; return; }
+        var html = '<div>';
+        sessions.forEach(function(s) {
+            var isPlaying = document.getElementById('test-status-text').textContent === 'Playing: ' + s.name;
+            var W = 'width:70px;';
+            var playBtn = isPlaying
+                ? '<button class="btn btn-success btn-xs" style="' + W + '" disabled>Playing</button>'
+                : '<button class="btn btn-default btn-xs" style="' + W + '" onclick="testPlay(' + JSON.stringify(s.name).replace(/"/g, '&quot;') + ')"' + (anyPlaying || hasMeet ? ' disabled' : '') + '>Play</button>';
+            var delBtn = s.source === 'custom'
+                ? '<button class="btn btn-default btn-xs" style="' + W + ' margin-right:4px;" onclick="testDelete(' + JSON.stringify(s.name).replace(/"/g, '&quot;') + ')">Delete</button>'
+                : '<span style="display:inline-block; ' + W + ' margin-right:4px;"></span>';
+            var badge = s.source === 'builtin'
+                ? '<span style="font-size:0.8em; color:#999; margin-left:4px;">built-in</span>' : '';
+            html += '<div style="display:flex; align-items:center; border-bottom:1px solid #ddd; padding:4px 0;">' +
+                    '<span style="flex:1;">' + s.name + badge + '</span>' +
+                    '<div style="display:flex;">' + delBtn + playBtn + '</div>' +
+                    '</div>';
+        });
+        div.innerHTML = html + '</div>';
+    }
+
+    function setSpeed(s) {
+        fetch('/test_set_speed', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({speed:s})})
+            .then(function(r){ return r.json(); }).then(function(d){ _highlightSpeed(d.speed); });
+    }
+
+    function _highlightSpeed(s) {
+        var map = {0.25:'¼×', 0.5:'½×', 1:'1×', 2:'2×', 4:'4×', 10:'10×'};
+        document.querySelectorAll('.speed-btn').forEach(function(btn) {
+            var match = Math.abs(parseFloat(btn.textContent) - s) < 0.01 ||
+                        btn.textContent === map[s];
+            btn.className = 'btn btn-xs speed-btn ' + (match ? 'btn-primary' : 'btn-default');
+        });
+    }
+
+    function testPlay(name) {
+        fetch('/test_play', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name})})
+            .then(function(){ setTimeout(_loadTestStatus, 400); });
+    }
+
+    function testStop() {
+        fetch('/test_stop', {method:'POST'}).then(function(){ setTimeout(_loadTestStatus, 400); });
+    }
+
+    function testDelete(name) {
+        fetch('/test_session_delete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name})})
+            .then(function(){ _loadTestStatus(); });
+    }
+
+    function testUpload(input) {
+        if (!input.files || !input.files[0]) return;
+        var fd = new FormData();
+        fd.append('session_file', input.files[0]);
+        fetch('/test_session_upload', {method:'POST', body:fd}).then(function(){ _loadTestStatus(); });
+    }
+
+    function testRecordToggle() {
+        if (_recording) {
+            fetch('/test_record_stop', {method:'POST'}).then(function(){ _loadTestStatus(); });
+        } else {
+            var name = document.getElementById('test-record-name').value.trim() || 'recording';
+            fetch('/test_record_start', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name})})
+                .then(function(){ _loadTestStatus(); });
+        }
+    }
+
+    function testMeetUpload(input) {
+        if (!input.files || !input.files[0]) return;
+        var fd = new FormData();
+        fd.append('meet_file', input.files[0]);
+        var status = document.getElementById('test-meet-status');
+        status.style.color = '#888';
+        status.textContent = 'Loading…';
+        fetch('/test_meet_upload', {method:'POST', body:fd}).then(function(r){ return r.json(); }).then(function(d){
+            if (d.ok) {
+                setTimeout(_loadTestStatus, 300);
+            } else {
+                status.style.color = '#c55';
+                status.textContent = d.error || 'Upload failed.';
+            }
+        });
+    }
+
+    document.querySelectorAll('.nav-tabs a').forEach(function(link) {
+        if (link.getAttribute('href') === '#tab-test')
+            link.addEventListener('click', function() {
+                _ensureUpdateSock();
+                _updateSock.off('test_status').on('test_status', _loadTestStatus);
+                _loadTestStatus();
+            });
+        if (link.getAttribute('href') === '#tab-meet')
+            link.addEventListener('click', _refreshMeetTab);
+    });
+
+    // ── Network tab ─────────────────────────────────────────────────────────
+    var _joinSsid = '';
+
+    function _applyWifiStatus(d) {
+        var btn   = document.getElementById('btn-wifi-toggle');
+        var wtext = document.getElementById('wifi-status-text');
+        var eip   = document.getElementById('eth-ip-text');
+        btn.disabled = false;
+        btn.textContent = d.enabled ? 'Disable WiFi' : 'Enable WiFi';
+        if (!d.enabled) {
+            wtext.style.color = '#888';
+            wtext.textContent = 'Disabled';
+        } else if (d.wifi_ip) {
+            wtext.style.color = '#3a7a3a';
+            wtext.textContent = d.ssid ? d.ssid + ' · ' + d.wifi_ip : d.wifi_ip;
+        } else if (d.ssid) {
+            wtext.style.color = '#888';
+            wtext.textContent = d.ssid + ' · no IP';
+        } else {
+            wtext.style.color = '#888';
+            wtext.textContent = 'Not connected';
+        }
+        if (d.eth_ip) {
+            eip.style.color = '#3a7a3a';
+            eip.textContent = d.eth_ip;
+        } else {
+            eip.style.color = '#888';
+            eip.textContent = 'Not connected';
+        }
+        if (d.eth_ip) {
+            document.getElementById('eth-ip-input').value = d.eth_ip.split('/')[0];
+        }
+    }
+
+    function setEthDhcp() {
+        var status = document.getElementById('eth-ip-status');
+        if (!confirm('Switch Ethernet to DHCP?\n\nThe IP address will change and your current session will disconnect.')) return;
+        status.style.color = '#888';
+        status.textContent = 'Applying…';
+        fetch('/eth_dhcp_set', {method:'POST'}).then(function(r){ return r.json(); }).then(function(d){
+            if (d.ok) {
+                status.style.color = '#5a5';
+                status.textContent = 'Switched to DHCP. Check your router for the new IP.';
+            } else {
+                status.style.color = '#c55';
+                status.textContent = d.error || 'Failed.';
+            }
+        });
+    }
+
+    function setEthIp() {
+        var ip     = document.getElementById('eth-ip-input').value.trim();
+        var prefix = document.getElementById('eth-prefix-input').value.trim();
+        var status = document.getElementById('eth-ip-status');
+        if (!ip) { status.style.color = '#c55'; status.textContent = 'Enter an IP address.'; return; }
+        if (!confirm('Change Ethernet IP to ' + ip + '/' + prefix + '?\n\nThis will disconnect your current session.')) return;
+        status.style.color = '#888';
+        status.textContent = 'Applying…';
+        fetch('/eth_ip_set', {method:'POST', headers:{'Content-Type':'application/json'},
+                              body:JSON.stringify({ip:ip, prefix:prefix})})
+            .then(function(r){ return r.json(); }).then(function(d){
+                if (d.ok) {
+                    status.style.color = '#5a5';
+                    status.textContent = 'Applied. Reconnect at http://' + ip + ':5000/settings';
+                } else {
+                    status.style.color = '#c55';
+                    status.textContent = d.error || 'Failed.';
+                }
+            });
+    }
+
+    function _netTabActive() {
+        fetch('/wifi_status').then(function(r){ return r.json(); }).then(function(d){
+            if (d.error) {
+                document.getElementById('wifi-status-text').textContent = d.error;
+                return;
+            }
+            _applyWifiStatus(d);
+        }).catch(function(){ document.getElementById('wifi-status-text').textContent = 'Error loading status.'; });
+    }
+
+    function toggleWifi() {
+        document.getElementById('btn-wifi-toggle').disabled = true;
+        fetch('/wifi_toggle', {method:'POST'}).then(function(r){ return r.json(); }).then(function(d){
+            // Re-fetch full status so IPs are accurate after toggle
+            fetch('/wifi_status').then(function(r){ return r.json(); }).then(_applyWifiStatus);
+        });
+    }
+
+    function scanWifi() {
+        var list = document.getElementById('wifi-net-list');
+        list.innerHTML = '<span style="color:#888;">Scanning…</span>';
+        fetch('/wifi_scan').then(function(r){ return r.json(); }).then(function(d){
+            if (d.error) { list.innerHTML = '<span style="color:#c55;">' + d.error + '</span>'; return; }
+            if (!d.networks.length) { list.innerHTML = '<span style="color:#888;">No networks found.</span>'; return; }
+            var html = '<div>';
+            d.networks.forEach(function(n){
+                var bars = ['▂░░░','▂▄░░','▂▄▆░','▂▄▆█'][Math.min(3, Math.floor(n.signal / 26))];
+                var lock = n.security ? ' <small style="color:#999;">' + n.security + '</small>' : '';
+                var action = n.active
+                    ? '<button class="btn btn-success btn-xs" style="width:80px;" disabled>Connected</button>'
+                    : '<button class="btn btn-default btn-xs" style="width:80px;" onclick="showJoinForm(' +
+                      JSON.stringify(n.ssid).replace(/"/g, '&quot;') + ',' + (n.security ? 'true' : 'false') +
+                      ')">Connect</button>';
+                html += '<div style="display:flex; align-items:center; border-bottom:1px solid #ddd; padding:4px 0;">' +
+                        '<span style="flex:1;">' + n.ssid + lock + '</span>' +
+                        '<span style="font-family:monospace; color:#888; margin-right:4px; white-space:nowrap;">' + bars + '</span>' +
+                        '<div style="min-width:110px; text-align:center;">' + action + '</div>' +
+                        '</div>';
+            });
+            list.innerHTML = html + '</div>';
+        }).catch(function(){ document.getElementById('wifi-net-list').innerHTML = '<span style="color:#c55;">Scan failed.</span>'; });
+    }
+
+    function showJoinForm(ssid, needsPassword) {
+        _joinSsid = ssid;
+        document.getElementById('wifi-join-ssid').textContent = ssid;
+        document.getElementById('wifi-join-pw').value = '';
+        document.getElementById('wifi-join-pw').style.display = needsPassword ? '' : 'none';
+        document.getElementById('wifi-join-status').textContent = '';
+        document.getElementById('wifi-join-status').style.color = '';
+        document.getElementById('wifi-join-form').style.display = '';
+        if (needsPassword) document.getElementById('wifi-join-pw').focus();
+    }
+
+    function cancelJoin() {
+        document.getElementById('wifi-join-form').style.display = 'none';
+    }
+
+    function connectWifi() {
+        var pw     = document.getElementById('wifi-join-pw').value;
+        var status = document.getElementById('wifi-join-status');
+        status.style.color = '#888';
+        status.textContent = 'Connecting…';
+        fetch('/wifi_connect', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ssid: _joinSsid, password: pw})
+        }).then(function(r){ return r.json(); }).then(function(d){
+            if (d.ok) {
+                status.style.color = '#5a5';
+                status.textContent = 'Connected!';
+                setTimeout(function(){ cancelJoin(); _netTabActive(); scanWifi(); }, 1500);
+            } else {
+                status.style.color = '#c55';
+                status.textContent = d.error || 'Connection failed.';
+            }
+        }).catch(function(){ status.style.color = '#c55'; status.textContent = 'Request failed.'; });
+    }
+
+    function loadClients() {
+        fetch('/clients').then(function(r){ return r.json(); }).then(function(d){
+            var el = document.getElementById('client-list');
+            if (!d.clients.length) { el.innerHTML = '<span style="color:#888;">No clients connected.</span>'; return; }
+            var html = '<div>';
+            d.clients.forEach(function(c){
+                html += '<div style="display:flex; align-items:center; border-bottom:1px solid #ddd; padding:4px 0;">' +
+                        '<span style="flex:1;">' + c.ip + '</span>' +
+                        '<span style="color:#999;">' + c.at + '</span>' +
+                        '</div>';
+            });
+            el.innerHTML = html + '</div>';
+        });
+    }
+
+    // Load network status when the Network tab is clicked
+    document.querySelectorAll('.nav-tabs a').forEach(function(link) {
+        if (link.getAttribute('href') === '#tab-network')
+            link.addEventListener('click', function() { _netTabActive(); loadClients(); });
+    });
+
+    var _updateSock = null;
+
+    function _ensureUpdateSock() {
+        if (!_updateSock) _updateSock = io('/settings');
+    }
+
+    function loadVersions() {
+        _ensureUpdateSock();
+        var sel = document.getElementById('version-select');
+        var cur = document.getElementById('current-version');
+        cur.textContent = 'Loading…';
+        sel.disabled = true;
+        fetch('/version_list').then(function(r){ return r.json(); }).then(function(d){
+            sel.disabled = false;
+            if (!d.ok) { cur.textContent = d.error || 'Error'; return; }
+            cur.textContent = d.current || 'untagged';
+            sel.innerHTML = '<option value="">Latest (from GitHub)</option>';
+            d.versions.forEach(function(v) {
+                var opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = v + (v === d.current ? '  ← current' : '');
+                sel.appendChild(opt);
+            });
+        }).catch(function(){ sel.disabled = false; cur.textContent = 'Error'; });
+    }
+
+    function startUpdate() {
+        var btn    = document.getElementById('btn-run-update');
+        var out    = document.getElementById('update-output');
+        var status = document.getElementById('update-status');
+        var target = document.getElementById('version-select').value || null;
+        btn.disabled = true;
+        document.getElementById('btn-os-update').disabled = true;
+        out.innerHTML = '';
+        out.style.display = 'block';
+        status.style.color = '#888';
+        status.textContent = 'Running…';
+        var seen = 0;
+        var poll = setInterval(function() {
+            fetch('/update_log').then(function(r){ return r.json(); }).then(function(d) {
+                for (var i = seen; i < d.lines.length; i++) {
+                    var span = document.createElement('span');
+                    span.textContent = d.lines[i].text;
+                    if (d.lines[i].error) span.style.color = '#f88';
+                    out.appendChild(span);
+                }
+                seen = d.lines.length;
+                out.scrollTop = out.scrollHeight;
+                if (d.done !== null) {
+                    clearInterval(poll);
+                    document.getElementById('btn-os-update').disabled = false;
+                    if (d.done) {
+                        status.style.color = '#5a5';
+                        status.textContent = 'Done — restarting, page will reload…';
+                        setTimeout(function() { location.reload(); }, 6000);
+                    } else {
+                        status.style.color = '#c55';
+                        status.textContent = 'Failed — see output above.';
+                        btn.disabled = false;
+                    }
+                }
+            }).catch(function(){});
+        }, 500);
+        fetch('/update_start', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({target: target})}).then(function(r) {
+            if (!r.ok) {
+                clearInterval(poll);
+                status.style.color = '#c55';
+                status.textContent = 'Could not start update.';
+                btn.disabled = false;
+                document.getElementById('btn-os-update').disabled = false;
+            }
+        }).catch(function(e) {
+            clearInterval(poll);
+            status.style.color = '#c55';
+            status.textContent = 'Request failed: ' + e;
+            btn.disabled = false;
+            document.getElementById('btn-os-update').disabled = false;
+        });
+    }
+
+    function startOsUpdate() {
+        var btn    = document.getElementById('btn-os-update');
+        var out    = document.getElementById('os-update-output');
+        var status = document.getElementById('os-update-status');
+        btn.disabled = true;
+        document.getElementById('btn-run-update').disabled = true;
+        out.innerHTML = '';
+        out.style.display = 'block';
+        status.style.color = '#888';
+        status.textContent = 'Running…';
+        var seen = 0;
+        var poll = setInterval(function() {
+            fetch('/os_update_log').then(function(r){ return r.json(); }).then(function(d) {
+                for (var i = seen; i < d.lines.length; i++) {
+                    var span = document.createElement('span');
+                    span.textContent = d.lines[i].text;
+                    if (d.lines[i].error) span.style.color = '#f88';
+                    out.appendChild(span);
+                }
+                seen = d.lines.length;
+                out.scrollTop = out.scrollHeight;
+                if (d.done !== null) {
+                    clearInterval(poll);
+                    document.getElementById('btn-run-update').disabled = false;
+                    if (d.done) {
+                        status.style.color = '#5a5';
+                        status.textContent = 'Done.';
+                    } else {
+                        status.style.color = '#c55';
+                        status.textContent = 'Failed — see output above.';
+                    }
+                    btn.disabled = false;
+                }
+            }).catch(function(){});
+        }, 500);
+        fetch('/os_update_start', {method: 'POST'}).then(function(r) {
+            if (!r.ok) {
+                clearInterval(poll);
+                status.style.color = '#c55';
+                status.textContent = 'Could not start OS update.';
+                btn.disabled = false;
+                document.getElementById('btn-run-update').disabled = false;
+            }
+        }).catch(function(e) {
+            clearInterval(poll);
+            status.style.color = '#c55';
+            status.textContent = 'Request failed: ' + e;
+            btn.disabled = false;
+            document.getElementById('btn-run-update').disabled = false;
+        });
+    }
+
+    function restoreBackup(input) {
+        var file = input.files[0];
+        if (!file) return;
+        input.value = '';
+        var status = document.getElementById('restore-status');
+        status.style.color = '#888';
+        status.textContent = 'Uploading…';
+        var fd = new FormData();
+        fd.append('backup_file', file);
+        fetch('/backup_restore', {method: 'POST', body: fd}).then(function(r) { return r.json(); }).then(function(d) {
+            if (!d.ok) {
+                status.style.color = '#c55';
+                status.textContent = d.error || 'Restore failed.';
+                return;
+            }
+            status.style.color = '#888';
+            status.textContent = 'Restored — restarting…';
+            var tries = 0;
+            var poll = setInterval(function() {
+                tries++;
+                fetch('/settings').then(function(r) {
+                    if (r.ok) { clearInterval(poll); location.reload(); }
+                }).catch(function() {
+                    if (tries > 60) { clearInterval(poll); status.textContent = 'Restart timed out.'; }
+                });
+            }, 1000);
+        }).catch(function() {
+            status.style.color = '#c55';
+            status.textContent = 'Upload failed.';
+        });
+    }
+
+    document.querySelectorAll('.nav-tabs a').forEach(function(link) {
+        if (link.getAttribute('href') === '#tab-update')
+            link.addEventListener('click', loadVersions);
+    });
+
+    function updateFontPreview(select, previewId) {
+        document.getElementById(previewId).style.fontFamily = "'" + select.value + "', monospace";
+    }
+
+    function saveCustomTheme() {
+        var n = prompt('Theme name:');
+        if (n && n.trim()) {
+            document.getElementById('theme_save_name').value = n.trim();
+            document.getElementById('theme_save_form').submit();
+        }
+    }
+
+    document.querySelectorAll('.file-picker input[type="file"]').forEach(function(input) {
+        input.addEventListener('change', function() {
+            var msg = this.closest('.file-picker').querySelector('.file-msg');
+            if (this.files && this.files[0]) {
+                msg.textContent = this.files[0].name;
+                msg.style.transition = 'none';
+                msg.style.opacity = '1';
+                var el = msg;
+                setTimeout(function() {
+                    el.style.transition = 'opacity 2s';
+                    el.style.opacity = '0';
+                }, 2000);
+            }
+        });
+    });
+
+    // ── Time tab ─────────────────────────────────────────────────────────────
+    function _loadTimeStatus() {
+        fetch('/time_status').then(function(r){ return r.json(); }).then(function(d){
+            document.getElementById('time-display').textContent = d.date + '  ' + d.time;
+            document.getElementById('time-tz').textContent = d.timezone;
+            var ntpEl = document.getElementById('ntp-status');
+            if (d.ntp_active && d.synchronized) {
+                ntpEl.textContent = '● NTP synchronized';
+                ntpEl.style.color = '#5a5';
+            } else if (d.ntp_active) {
+                ntpEl.textContent = '○ NTP active, syncing…';
+                ntpEl.style.color = '#888';
+            } else {
+                ntpEl.textContent = '○ NTP inactive';
+                ntpEl.style.color = '#c55';
+            }
+            document.getElementById('time-set-date').value = d.date.replace(/-/g, '/');
+            document.getElementById('time-set-time').value = d.time;
+        });
+    }
+
+    function timeSync() {
+        var btn   = document.getElementById('btn-time-sync');
+        var ntpEl = document.getElementById('ntp-status');
+        btn.disabled = true;
+        ntpEl.style.color = '#888';
+        ntpEl.textContent = 'Checking network…';
+
+        function doSync() {
+            ntpEl.textContent = 'Syncing…';
+            fetch('/time_sync', {method:'POST'}).then(function(r){ return r.json(); }).then(function(d){
+                btn.disabled = false;
+                if (d.ok) {
+                    setTimeout(_loadTimeStatus, 2000);
+                } else {
+                    ntpEl.style.color = '#c55';
+                    ntpEl.textContent = 'Error: ' + (d.error || 'Sync failed');
+                }
+            });
+        }
+
+        fetch('/wifi_status').then(function(r){ return r.json(); }).then(function(net){
+            var hasWifi = net.wifi_ip && net.wifi_ip.trim();
+            var hasEth  = net.eth_ip  && net.eth_ip.trim() && net.eth_ip !== 'Not connected';
+            if (!hasWifi && !hasEth) {
+                btn.disabled = false;
+                ntpEl.style.color = '#c55';
+                var msg;
+                if (!net.enabled)
+                    msg = 'WiFi is disabled and Ethernet is not connected.';
+                else if (!net.ssid)
+                    msg = 'WiFi is not connected to a network and Ethernet is not connected.';
+                else
+                    msg = 'No network connection — cannot reach NTP server.';
+                ntpEl.innerHTML = msg + ' <a href="#" onclick="document.querySelector(\'[href=\\\"#tab-netgroup\\\"]\').click();return false;">Go to Network tab</a>';
+                return;
+            }
+            doSync();
+        }).catch(doSync);  // nmcli unavailable (dev machine) — try anyway
+    }
+
+    function timeSet() {
+        var date   = document.getElementById('time-set-date').value.replace(/\//g, '-');
+        var time   = document.getElementById('time-set-time').value;
+        var status = document.getElementById('time-set-status');
+        if (!date || !time) { status.style.color = '#c55'; status.textContent = 'Enter date and time.'; return; }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { status.style.color = '#c55'; status.textContent = 'Use YYYY/MM/DD format.'; return; }
+        status.style.color = '#888';
+        status.textContent = 'Setting…';
+        fetch('/time_set', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({date:date, time:time})})
+            .then(function(r){ return r.json(); }).then(function(d){
+                if (d.ok) {
+                    status.style.color = '#5a5';
+                    status.textContent = 'Time set.';
+                    setTimeout(_loadTimeStatus, 500);
+                } else {
+                    status.style.color = '#c55';
+                    status.textContent = d.error || 'Failed.';
+                }
+            });
+    }
+
+    document.querySelectorAll('.nav-tabs a').forEach(function(link) {
+        if (link.getAttribute('href') === '#tab-time')
+            link.addEventListener('click', _loadTimeStatus);
+    });
+
+    // ── Terminal tab ─────────────────────────────────────────────────────────
+    var _term = null;
+    var _termSock = null;
+
+    function _loadXterm(callback) {
+        if (window.Terminal) { callback(); return; }
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = '/static/css/xterm.min.css';
+        document.head.appendChild(link);
+        var script = document.createElement('script');
+        script.src = '/static/js/xterm.min.js';
+        script.onload = callback;
+        script.onerror = function() {
+            document.getElementById('terminal-container').innerHTML =
+                '<p style="color:#c55; padding:8px 0;">xterm.js not found — run install.sh to download it.</p>';
+        };
+        document.head.appendChild(script);
+    }
+
+    function _initTerminal() {
+        if (_term) return;
+        _term = new Terminal({cursorBlink: true, fontSize: 14, fontFamily: '"Courier New", monospace', rows: 24, cols: 80});
+        _term.open(document.getElementById('terminal-container'));
+        _term.onData(function(data) { if (_termSock) _termSock.emit('input', data); });
+        if (!_termSock) {
+            _termSock = io('/terminal');
+            _termSock.on('output', function(data) { if (_term) _term.write(data); });
+            _termSock.on('exit', function() {
+                if (_term) { _term.write('\r\n\x1b[33m[Process exited]\x1b[0m\r\n'); }
+                document.getElementById('btn-term-stop').style.display = 'none';
+            });
+        }
+    }
+
+    function termLaunch(cmdKey) {
+        _loadXterm(function() {
+            _initTerminal();
+            function _doStart() {
+                fetch('/terminal_stop', {method:'POST'}).then(function() {
+                    if (_term) _term.clear();
+                    return fetch('/terminal_start', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({cmd: cmdKey || 'bash'})
+                    });
+                }).then(function(r){ return r.json(); }).then(function(d){
+                    if (d.ok) {
+                        document.getElementById('btn-term-stop').style.display = '';
+                        _termSock.emit('resize', {rows: _term.rows, cols: _term.cols});
+                    } else {
+                        _term.write('\r\n\x1b[31mError: ' + (d.error || 'Failed to start') + '\x1b[0m\r\n');
+                    }
+                });
+            }
+            // Wait for socket connection before starting — early output would be lost otherwise
+            if (_termSock.connected) {
+                _doStart();
+            } else {
+                _termSock.once('connect', _doStart);
+            }
+        });
+    }
+
+    function termStop() {
+        if (_term) _term.clear();
+        fetch('/terminal_stop', {method:'POST'}).then(function(){
+            document.getElementById('btn-term-stop').style.display = 'none';
+        });
+    }
+
+    document.querySelectorAll('.nav-tabs a').forEach(function(link) {
+        if (link.getAttribute('href') === '#tab-terminal')
+            link.addEventListener('click', function() { _loadXterm(function(){}); });
+    });
+
+    // ── Debug tab ────────────────────────────────────────────────────────────
+    var _debugSock = null;
+
+    function _applyDebugState(enabled) {
+        var btn = document.getElementById('btn-debug-toggle');
+        btn.textContent = enabled ? 'Disable' : 'Enable';
+        btn.className = 'btn btn-xs ' + (enabled ? 'btn-danger' : 'btn-default');
+    }
+
+    function debugToggle() {
+        fetch('/debug_toggle', {method:'POST'}).then(function(r){ return r.json(); }).then(function(d){
+            _applyDebugState(d.enabled);
+        });
+    }
+
+    function debugClear() {
+        document.getElementById('debug-output').textContent = '';
+    }
+
+    function _applySerialStatus(d) {
+        var badge = document.getElementById('serial-status-badge');
+        if (!badge) return;
+        var labels = {idle: '—', opening: 'Opening…', open: 'Connected', error: 'Error'};
+        var colors = {idle: ['#ccc','#333'], opening: ['#d9a21b','#fff'], open: ['#3c763d','#fff'], error: ['#a94442','#fff']};
+        badge.textContent = labels[d.state] || d.state;
+        badge.style.background = (colors[d.state] || ['#ccc','#333'])[0];
+        badge.style.color       = (colors[d.state] || ['#ccc','#333'])[1];
+        if (d.msg) {
+            var log = document.getElementById('serial-log');
+            var ts  = new Date().toLocaleTimeString();
+            log.textContent += '[' + ts + '] ' + d.msg + '\n';
+            log.scrollTop = log.scrollHeight;
+        }
+    }
+
+    function _initDebugSock() {
+        if (_debugSock) return;
+        _debugSock = io('/settings');
+        _debugSock.on('debug_line', function(d) {
+            var out = document.getElementById('debug-output');
+            var line = document.createElement('div');
+            var hex  = document.createElement('span');
+            hex.textContent = d.hex;
+            hex.style.color = '#888';
+            hex.style.marginRight = '16px';
+            line.appendChild(hex);
+            if (d.text) {
+                var txt = document.createElement('span');
+                txt.textContent = d.text;
+                line.appendChild(txt);
+            }
+            out.appendChild(line);
+            while (out.children.length > 200) out.removeChild(out.firstChild);
+            out.scrollTop = out.scrollHeight;
+        });
+        _debugSock.on('serial_log', function(d) {
+            _applySerialStatus(d);
+        });
+    }
+
+    document.querySelectorAll('.nav-tabs a').forEach(function(link) {
+        if (link.getAttribute('href') === '#tab-debug') {
+            link.addEventListener('click', function() {
+                _initDebugSock();
+                fetch('/debug_status').then(function(r){ return r.json(); }).then(function(d){
+                    _applyDebugState(d.enabled);
+                });
+                fetch('/serial_status').then(function(r){ return r.json(); }).then(function(d){
+                    _applySerialStatus(d);
+                });
+            });
+        }
+    });
+
+    // ── Cloud relay status ────────────────────────────────────────────────────
+    function _applyCloudStatus(d) {
+        var text = document.getElementById('cloud-status-text');
+        var btn  = document.getElementById('btn-cloud-toggle');
+        if (!d.url) {
+            text.style.color = '#888';
+            text.textContent = 'Not configured';
+            btn.textContent  = 'Connect';
+            btn.disabled     = true;
+        } else if (d.connected) {
+            text.style.color = '#5a5';
+            text.textContent = 'Connected · ' + d.url;
+            btn.textContent  = 'Disconnect';
+            btn.disabled     = false;
+        } else if (d.running) {
+            text.style.color = '#a80';
+            text.textContent = 'Connecting…';
+            btn.textContent  = 'Disconnect';
+            btn.disabled     = false;
+        } else {
+            text.style.color = '#888';
+            text.textContent = 'Disconnected';
+            btn.textContent  = 'Connect';
+            btn.disabled     = false;
+        }
+    }
+
+    function toggleCloud() {
+        fetch('/cloud_toggle', {method:'POST'})
+            .then(function(r){ return r.json(); })
+            .then(_applyCloudStatus);
+    }
+
+    fetch('/cloud_status').then(function(r){ return r.json(); }).then(_applyCloudStatus);
+    setInterval(function() {
+        fetch('/cloud_status').then(function(r){ return r.json(); }).then(_applyCloudStatus);
+    }, 2000);
+    </script>
+</body>
+</html>

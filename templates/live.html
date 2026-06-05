@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/timing_display.css') }}">
+<style>
+:root {
+    --color-bg:            {{ theme_colors.bg }};
+    --color-header-bg:     {{ theme_colors.header_bg }};
+    --color-header-border: {{ theme_colors.header_border }};
+    --color-header-label:  {{ theme_colors.header_label }};
+    --color-header-value:  {{ theme_colors.header_value }};
+    --color-th-text:       {{ theme_colors.th_text }};
+    --color-th-bg:         {{ theme_colors.th_bg }};
+    --color-row-odd:       {{ theme_colors.row_odd }};
+    --color-row-even:      {{ theme_colors.row_even }};
+    --color-row-text:      {{ theme_colors.row_text }};
+    --color-time:          {{ theme_colors.time }};
+    --color-delta-better:  {{ theme_colors.delta_better }};
+    --color-delta-worse:   {{ theme_colors.delta_worse }};
+    --color-podium-gold:   {{ theme_colors.podium_gold }};
+    --color-podium-silver: {{ theme_colors.podium_silver }};
+    --color-podium-bronze: {{ theme_colors.podium_bronze }};
+    --font-family:         '{{ theme_fonts.family }}';
+    --font-digits:         '{{ theme_fonts.digits }}';
+    --font-timing:         '{{ theme_fonts.timing }}';
+}
+</style>
+<script>
+var labels = {{ labels | tojson }};
+var NUM_LANES   = {{ num_lanes }};
+var SHOW_PODIUM = {{ show_podium | tojson }};
+var lane_running = {};
+var lane_place_blank = {};
+var lane_time_blank = {};
+var lane_name_blank = {};
+var last_event = 0;
+var last_heat = 0;
+var last_state = 0;
+var current_state = 0;
+var brief_results = false;
+var _podium_timers = [];
+var _podium_race_key = null;
+
+/* Cached stable DOM references — set once in init() */
+var _pc = null;  /* place-column */
+var _tc = null;  /* time-column  */
+var _dc = null;  /* delta-column */
+var _sb = null;  /* #scoreboard div      */
+
+/* ── Carousel overlay ─────────────────────────────────────────────────────── */
+var CAROUSEL_IMAGES   = {{ carousel_images | tojson }};
+var CAROUSEL_INTERVAL = {{ carousel_interval }} * 1000;
+var CAROUSEL_FADE     = 1000; /* ms — must match CSS transition */
+var _carousel_idx     = 0;
+var _carousel_timer   = null;
+var _carousel_front   = 'a'; /* which img layer is currently visible */
+
+function _carousel_next() {
+    _carousel_idx = (_carousel_idx + 1) % CAROUSEL_IMAGES.length;
+    var next_src = '/images/' + CAROUSEL_IMAGES[_carousel_idx];
+    var front = document.getElementById('carousel-img-' + _carousel_front);
+    var back  = document.getElementById('carousel-img-' + (_carousel_front === 'a' ? 'b' : 'a'));
+    back.src     = next_src;
+    back.style.opacity  = '1';
+    front.style.opacity = '0';
+    _carousel_front = (_carousel_front === 'a') ? 'b' : 'a';
+}
+
+var _overlay_fade_timer = null;
+
+function show_overlay(active) {
+    var ov = document.getElementById('carousel-overlay');
+    if (_overlay_fade_timer) { clearTimeout(_overlay_fade_timer); _overlay_fade_timer = null; }
+
+    if (active && CAROUSEL_IMAGES.length) {
+        _carousel_idx   = 0;
+        _carousel_front = 'a';
+        var imgA = document.getElementById('carousel-img-a');
+        var imgB = document.getElementById('carousel-img-b');
+        imgA.src = '/images/' + CAROUSEL_IMAGES[0];
+        imgA.style.opacity = '1';
+        imgB.src = '';
+        imgB.style.opacity = '0';
+        ov.style.display = 'block';
+        requestAnimationFrame(function() {
+            requestAnimationFrame(function() { ov.style.opacity = '1'; });
+        });
+        if (!_carousel_timer && CAROUSEL_IMAGES.length > 1)
+            _carousel_timer = setInterval(_carousel_next, CAROUSEL_INTERVAL);
+    } else {
+        ov.style.opacity = '0';
+        if (_carousel_timer) { clearInterval(_carousel_timer); _carousel_timer = null; }
+        _overlay_fade_timer = setTimeout(function() { ov.style.display = 'none'; }, 850);
+    }
+}
+
+/* ── Header chrono ────────────────────────────────────────────────────────── */
+var _chrono_base  = null;  /* last running_time from server, in hundredths */
+var _chrono_at    = null;  /* Date.now() when _chrono_base was recorded     */
+var _chrono_timer = null;
+
+function parseHundredths(str) {
+    var m = str.match(/^(?:(\d+):)?(\d{1,2})\.(\d{2})$/);
+    if (!m) return null;
+    return parseInt(m[1] || 0) * 6000 + parseInt(m[2]) * 100 + parseInt(m[3]);
+}
+
+function formatHundredths(h) {
+    var hh = h % 100;
+    var ss = Math.floor(h / 100) % 60;
+    var mm = Math.floor(h / 6000);
+    var frac = '.' + (hh < 10 ? '0' : '') + hh;
+    return mm > 0 ? mm + ':' + (ss < 10 ? '0' : '') + ss + frac : ss + frac;
+}
+
+function start_chrono() {
+    document.getElementById('header_chrono_cell').style.display = '';
+    if (_chrono_timer) return;
+    _chrono_timer = setInterval(tick_chrono, 50);
+}
+
+function stop_chrono() {
+    if (_chrono_timer) { clearInterval(_chrono_timer); _chrono_timer = null; }
+    _chrono_base = null;
+    document.getElementById('header_chrono_cell').style.display = 'none';
+}
+
+function tick_chrono() {
+    if (_chrono_base === null) return;
+    var elapsed = Math.floor((Date.now() - _chrono_at) / 10);
+    document.getElementById('live_chrono').textContent = formatHundredths(_chrono_base + elapsed);
+}
+
+/* Fields the socket handler may write directly to the DOM */
+var VALID_FIELDS = new Set([
+    "current_event", "current_heat", "event_name",
+    {% for i in range(1, num_lanes + 1) %}"lane_place{{ i }}", {% endfor %}
+    {% for i in range(1, num_lanes + 1) %}"lane_time{{ i }}", {% endfor %}
+    {% for i in range(1, num_lanes + 1) %}"lane_name{{ i }}", {% endfor %}
+    {% for i in range(1, num_lanes + 1) %}"lane_club{{ i }}", {% endfor %}
+    {% for i in range(1, num_lanes + 1) %}"lane_delta{{ i }}", {% endfor %}
+    {% for i in range(1, num_lanes + 1) %}"lane_name_alt{{ i }}", {% endfor %}
+]);
+
+function on_timer() {
+    var d = new Date();
+    var h = ("0" + d.getHours()).slice(-2);
+    var m = ("0" + d.getMinutes()).slice(-2);
+    document.getElementById("meet_datetime").innerHTML = h + ":" + m;
+}
+
+function build_scoreboard_bg() {
+    var rows = Array.from(_sb.querySelectorAll('.timing-table tr'));
+    var sbRect = _sb.getBoundingClientRect();
+    if (!sbRect.height) return;
+    var bg = document.getElementById('timing-bg');
+    var stops = [];
+    rows.forEach(function(row) {
+        var rect = row.getBoundingClientRect();
+        var color = window.getComputedStyle(row).backgroundColor;
+        var top = ((rect.top - sbRect.top) / sbRect.height * 100).toFixed(2) + '%';
+        var bot = ((rect.bottom - sbRect.top) / sbRect.height * 100).toFixed(2) + '%';
+        stops.push(color + ' ' + top, color + ' ' + bot);
+    });
+    if (stops.length) bg.style.background = 'linear-gradient(to bottom, ' + stops.join(', ') + ')';
+}
+
+function apply_state_transition() {
+    if (current_state === last_state) return;
+    switch (current_state) {
+        case 1:
+            mode_to_intro();
+            break;
+        case 2:
+            mode_to_running();
+            break;
+        case 3:
+            mode_to_results();
+            if (brief_results) {
+                setTimeout(function() {
+                    if (current_state == 3) {
+                        last_state = 3;
+                        current_state = 1;
+                        mode_to_intro();
+                        last_state = current_state;
+                    }
+                }, 3000);
+            }
+            break;
+    }
+    last_state = current_state;
+}
+
+function init() {
+    _pc = document.getElementById("place-column");
+    _tc = document.getElementById("time-column");
+    _dc = document.getElementById("delta-column");
+    _sb = document.getElementById("scoreboard");
+    on_timer();
+    window.setInterval(on_timer, 1000);
+    setTimeout(build_scoreboard_bg, 100);
+    window.addEventListener('resize', build_scoreboard_bg);
+}
+
+function highlight_podium() {
+    if (!SHOW_PODIUM) return;
+    _podium_timers.forEach(function(t) { clearTimeout(t); });
+    _podium_timers = [];
+    var by_place = {};
+    document.querySelectorAll('[id^="lane_place"]').forEach(function(el) {
+        var place = parseInt(el.textContent.trim());
+        if (place >= 1 && place <= 3) by_place[place] = el.parentElement;
+    });
+    var delays = {1: 0, 2: 400, 3: 800};
+    [1, 2, 3].forEach(function(place) {
+        var row = by_place[place];
+        if (!row) return;
+        var cls = place === 1 ? 'podium-gold' : place === 2 ? 'podium-silver' : 'podium-bronze';
+        if (row.classList.contains(cls)) return;
+        row.classList.remove('podium-gold', 'podium-silver', 'podium-bronze');
+        _podium_timers.push(setTimeout(function() { row.classList.add(cls); }, delays[place]));
+    });
+}
+
+function clear_podium() {
+    _podium_timers.forEach(function(t) { clearTimeout(t); });
+    _podium_timers = [];
+    document.querySelectorAll('.podium-gold, .podium-silver, .podium-bronze').forEach(function(el) {
+        el.classList.remove('podium-gold', 'podium-silver', 'podium-bronze');
+    });
+}
+
+function reset_times() {
+    document.querySelectorAll('[id^="lane_time"]').forEach(function(el) {
+        el.classList.remove('time-running', 'time-locked');
+    });
+}
+
+function set_header_mode(active) {
+    document.getElementById("header_meet_title_wrap").style.display = active ? "none" : "";
+    document.getElementById("header_event_cell").style.display      = active ? ""     : "none";
+    document.getElementById("header_heat_cell").style.display       = active ? ""     : "none";
+    document.getElementById("header_name_cell").style.display       = active ? ""     : "none";
+}
+
+function expand_cols() {
+    _pc.style.width = '6vw';  _pc.style.maxWidth = '6vw';
+    _tc.style.width = '17vw'; _tc.style.maxWidth = '17vw';
+    _dc.style.width = '9vw';  _dc.style.maxWidth = '9vw';
+    _tc.innerHTML = labels.time;
+}
+
+function collapse_cols() {
+    _pc.classList.remove("timing-anim"); _tc.classList.remove("timing-anim"); _dc.classList.remove("timing-anim");
+    _pc.style.width = '0'; _pc.style.maxWidth = '0';
+    _tc.style.width = '0'; _tc.style.maxWidth = '0';
+    _dc.style.width = '0'; _dc.style.maxWidth = '0';
+    _tc.innerHTML = '';
+    void _pc.offsetWidth;
+    _pc.classList.add("timing-anim"); _tc.classList.add("timing-anim"); _dc.classList.add("timing-anim");
+}
+
+function reset_state() {
+    current_state = 0;
+    last_state = 0;
+    last_event = 0;
+    last_heat = 0;
+    lane_running = {};
+    lane_place_blank = {};
+    lane_time_blank = {};
+    lane_name_blank = {};
+}
+
+function mode_to_intro() {
+    brief_results = false;
+    stop_chrono();
+    set_header_mode(true);
+    clear_podium();
+    reset_times();
+    _pc.classList.remove("timing-anim"); _tc.classList.remove("timing-anim"); _dc.classList.remove("timing-anim");
+    _pc.style.width = '0'; _pc.style.maxWidth = '0';
+    _tc.style.width = '0'; _tc.style.maxWidth = '0';
+    _dc.style.width = '0'; _dc.style.maxWidth = '0';
+    _tc.innerHTML = '';
+    void _pc.offsetWidth;
+    _pc.classList.add("timing-anim"); _tc.classList.add("timing-anim"); _dc.classList.add("timing-anim");
+}
+
+function mode_to_running() {
+    brief_results = false;
+    set_header_mode(true);
+    clear_podium();
+    _podium_race_key = last_event + '|' + last_heat;
+    expand_cols();
+}
+
+function mode_to_results() {
+    stop_chrono();
+    set_header_mode(true);
+    expand_cols();
+    highlight_podium();
+}
+
+</script>
+</head>
+
+<body style="margin:0px" onload="init();">
+
+<div id="carousel-overlay" style="display:none; position:fixed; inset:0; z-index:1000; background:#000; opacity:0; transition:opacity 0.8s ease;">
+    <img id="carousel-img-a" src="" style="position:absolute; inset:4%; width:92%; height:92%; object-fit:contain; transition:opacity 1s ease; opacity:1;">
+    <img id="carousel-img-b" src="" style="position:absolute; inset:4%; width:92%; height:92%; object-fit:contain; transition:opacity 1s ease; opacity:0;">
+</div>
+
+<div class="timing-outer">
+
+    <!-- Header bar -->
+    <div class="timing-header-bar">
+        <div class="header_cell header_cell_grow" id="header_meet_title_wrap">
+            <span class="header_value" id="header_meet_title">{{ meet_title }}</span>
+        </div>
+        <div class="header_cell" id="header_event_cell" style="display:none;">
+            <span class="header_label">{{ labels.event }}</span>
+            <span class="header_value" id="current_event"></span>
+        </div>
+        <div class="header_cell" id="header_heat_cell" style="display:none;">
+            <span class="header_label">{{ labels.heat }}</span>
+            <span class="header_value" id="current_heat"></span>
+        </div>
+        <div class="header_cell header_cell_name" id="header_name_cell" style="display:none;">
+            <span class="header_value" id="event_name"></span>
+        </div>
+        <div class="header_cell" id="header_chrono_cell" style="display:none;">
+            <span id="live_chrono" style="color:var(--color-time);font-family:var(--font-digits),monospace;font-size:4.5vh;"></span>
+        </div>
+        <div class="header_cell">
+            <span id="meet_datetime" style="font-family:var(--font-digits),monospace;font-size:4.5vh;color:var(--color-header-value);"></span>
+        </div>
+    </div>
+
+    <!-- Scoreboard table -->
+    <div class="timing-content" id="scoreboard">
+        <div id="timing-bg" aria-hidden="true"></div>
+        <table id="timing-board" class="timing-table{% if not show_lane_header %} hide-lane-header{% endif %}{% if not show_name_header %} hide-name-header{% endif %}{% if not show_club_header %} hide-club-header{% endif %}{% if not show_time_header %} hide-time-header{% endif %}{% if not show_delta_header %} hide-delta-header{% endif %}{% if not show_position_header %} hide-position-header{% endif %}{% if not show_name %} hide-name{% endif %}{% if not show_club %} hide-club{% endif %}{% if not show_delta %} hide-delta{% endif %}{% if not show_position %} hide-position{% endif %}">
+            <thead>
+                <tr class="timing-header">
+                    <th class="lane-column" style="text-align:center;">{{ labels.lane }}</th>
+                    <th id="name-column" style="text-align:left;">{{ labels.name }}</th>
+                    <th class="club-column" style="text-align:left;">{{ labels.club }}</th>
+                    <th id="time-column" class="time-column timing-anim" style="text-align:center;">{{ labels.time }}</th>
+                    <th id="delta-column" class="delta-column timing-anim" style="text-align:center;">{{ labels.delta }}</th>
+                    <th id="place-column" class="place-column timing-anim" style="text-align:center;">{{ labels.place }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in range(1, num_lanes + 1) %}
+                <tr class="{{ 'timing-row-odd' if i % 2 == 1 else 'timing-row-even' }}">
+                    <td style="text-align:center;">{{ i }}</td>
+                    <td class="lane-name-cell"><span id="lane_name{{ i }}"></span><span id="lane_name_alt{{ i }}" class="name-sub"></span></td>
+                    <td id="lane_club{{ i }}" style="text-align:left;"></td>
+                    <td class="td_time" style="text-align:center;"><span id="lane_time{{ i }}"></span></td>
+                    <td class="td_delta" id="lane_delta{{ i }}" style="text-align:right;"></td>
+                    <td id="lane_place{{ i }}" style="text-align:center;"></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if test_background %}
+    <div class="controls">
+        <button type="button" onclick="mode_to_intro();">Intro</button>
+        <button type="button" onclick="mode_to_running();">Running</button>
+        <button type="button" onclick="mode_to_results();">Results</button>
+        <br/>
+        <button type="button" onclick="socket.emit('next_heat', {});">Next Heat</button>
+    </div>
+    {% endif %}
+
+</div>
+<div id="test-overlay" class="test-overlay" style="display:none;">⚠ TEST SESSION</div>
+
+<div class="background"></div>
+
+<script src="/static/js/socket.io.min.js"></script>
+<script>
+    var s = {};
+
+    var socket = io.connect('http://' + document.domain + ':' + location.port + '/scoreboard');
+    socket.on('connect', function() { reset_state(); stop_chrono(); });
+    socket.on('reload', function() { location.reload(); });
+    socket.on('display_overlay', function(d) { show_overlay(d.active); });
+    socket.on('columns_state', function(d) { if (d.hidden) collapse_cols(); else expand_cols(); });
+    socket.on('race_finished', function() {
+        if ((last_event + '|' + last_heat) === _podium_race_key) highlight_podium();
+    });
+    socket.on('test_mode', function(d) {
+        document.getElementById('test-overlay').style.display = d.active ? '' : 'none';
+        if (d.active) { reset_state(); mode_to_intro(); }
+    });
+
+    socket.on('update_scoreboard', function(new_s) {
+        for (var k in new_s) { s[k] = new_s[k]; }
+
+        for (var k in s) {
+            if (VALID_FIELDS.has(k)) {
+                document.getElementById(k).innerHTML = s[k];
+            }
+            if (k.startsWith("lane_running")) {
+                var li = k.replace("lane_running", "");
+                var was_running = lane_running[li] || false;
+                lane_running[li] = s[k];
+                var tel = document.getElementById("lane_time" + li);
+                if (tel) {
+                    if (s[k]) {
+                        tel.classList.add('time-running');
+                        tel.classList.remove('time-locked');
+                    } else if (was_running) {
+                        tel.classList.remove('time-running');
+                        tel.classList.remove('time-locked');
+                        void tel.offsetWidth;
+                        tel.classList.add('time-locked');
+                    }
+                }
+            }
+            if (k.startsWith("lane_time"))  lane_time_blank[k.replace("lane_time", "")]  = (s[k].trim() === "");
+            if (k.startsWith("lane_place")) lane_place_blank[k.replace("lane_place", "")] = (s[k].trim() === "");
+            if (k.startsWith("lane_name") && !k.startsWith("lane_name_alt"))
+                lane_name_blank[k.replace("lane_name", "")] = (s[k].trim() === "");
+        }
+
+        if ("running_time" in s) {
+            var any_running = false;
+            for (var i = 1; i <= NUM_LANES; i++) {
+                if ((lane_running[i] || false) || (lane_place_blank[i] && !lane_time_blank[i])) { any_running = true; break; }
+            }
+            if (any_running) {
+                var h = parseHundredths(s["running_time"]);
+                if (h !== null) { _chrono_base = h; _chrono_at = Date.now(); }
+                if (current_state === 2) start_chrono();
+                for (var i = 1; i <= NUM_LANES; i++) {
+                    if (lane_running[i] || false)
+                        document.getElementById("lane_time" + i).innerHTML = s["running_time"];
+                }
+            }
+        }
+
+        if ("current_event" in s && s["current_event"] != last_event) {
+            last_event = s["current_event"];
+            current_state = 1;
+        }
+        if ("current_heat" in s && s["current_heat"] != last_heat) {
+            last_heat = s["current_heat"];
+            current_state = 1;
+        }
+
+        if (current_state != 1) {
+            var all_done = true;
+            for (var i = 1; i <= NUM_LANES; i++) {
+                if (((i in lane_running) && lane_running[i]) ||
+                    ((i in lane_place_blank) && lane_place_blank[i] &&
+                     (i in lane_time_blank)  && !lane_time_blank[i])) {
+                    all_done = false;
+                    break;
+                }
+            }
+            if (all_done) current_state = 3;
+        }
+
+        for (var i = 1; i <= NUM_LANES; i++) {
+            if (lane_running[i] || false) { current_state = 2; break; }
+        }
+
+        if (current_state === 1 && last_state === 2) {
+            brief_results = true;
+            current_state = 3;
+        }
+
+        apply_state_transition();
+        s = {};
+    });
+
+</script>
+</body>
+</html>

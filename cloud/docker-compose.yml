@@ -1,0 +1,33 @@
+services:
+  app:
+    build:
+      context: ..          # repo root — gives Dockerfile access to static/
+      dockerfile: cloud/Dockerfile
+    restart: unless-stopped
+    environment:
+      SECRET_KEY:             ${SECRET_KEY}
+      ADMIN_USER:             ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD:         ${ADMIN_PASSWORD}
+      DATA_DIR:               /data
+      DEPLOY_WEBHOOK_URL:     http://host.docker.internal:9000/deploy
+      DEPLOY_WEBHOOK_SECRET:  ${DEPLOY_SECRET:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - data:/data         # persists keys.json across updates
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  data:
+  caddy_data:
+  caddy_config:

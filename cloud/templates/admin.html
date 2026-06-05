@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t.admin_title }}</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#0d0d0d; color:#e0e0e0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:14px; padding:32px 24px; }
+        h1  { font-size:1.3em; font-weight:400; color:#888; letter-spacing:0.06em; text-transform:uppercase; }
+        h2  { font-size:0.78em; font-weight:600; color:#555; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px; }
+        table { width:100%; border-collapse:collapse; margin-bottom:16px; }
+        th { text-align:left; font-size:0.75em; color:#555; font-weight:normal; text-transform:uppercase; letter-spacing:0.05em; padding:6px 10px; border-bottom:1px solid #2a2a2a; }
+        td { padding:8px 10px; border-bottom:1px solid #1a1a1a; font-size:0.9em; vertical-align:middle; }
+        .key-display { font-family:monospace; font-size:0.82em; color:#666; word-break:break-all; }
+        .badge { display:inline-block; padding:2px 7px; border-radius:10px; font-size:0.72em; font-weight:600; text-transform:uppercase; }
+        .badge-active   { background:#1a3a1a; color:#4CAF50; }
+        .badge-inactive { background:#2a1a1a; color:#888; }
+        .badge-live     { background:#1a2a3a; color:#5ab4e8; }
+        form { display:inline; }
+        button { background:none; border:1px solid #333; color:#aaa; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.8em; transition:border-color 0.15s,color 0.15s; }
+        button:hover { border-color:#666; color:#fff; }
+        button.danger:hover { border-color:#c44; color:#f66; }
+        button.copy { font-size:0.75em; padding:2px 7px; }
+        button.copy.copied { border-color:#2e5e2e; color:#4CAF50; }
+        .add-form { display:flex; gap:8px; margin-top:4px; }
+        .add-form input { background:#1a1a1a; border:1px solid #333; color:#e0e0e0; padding:7px 12px; border-radius:4px; font-size:0.9em; flex:1; outline:none; }
+        .add-form input:focus { border-color:#555; }
+        .add-form button[type=submit] { background:#1a3a1a; border-color:#2e5e2e; color:#4CAF50; padding:7px 16px; }
+        .add-form button[type=submit]:hover { background:#224a22; border-color:#4CAF50; color:#7fdf7f; }
+        .empty-row td { color:#444; font-style:italic; }
+        .note { font-size:0.78em; color:#555; margin-top:6px; }
+        input[type=password], input[type=text] {
+            background:#1a1a1a; border:1px solid #333; color:#e0e0e0;
+            padding:7px 12px; border-radius:4px; font-size:0.9em; outline:none;
+        }
+        input[type=password]:focus, input[type=text]:focus { border-color:#555; }
+        select.field {
+            background:#1a1a1a; border:1px solid #333; color:#e0e0e0;
+            padding:7px 12px; border-radius:4px; font-size:0.9em; outline:none;
+        }
+
+        /* ── Nav tabs (same style as /settings) ── */
+        .nav-tabs { list-style:none; display:flex; border-bottom:1px solid #2a2a2a; margin:0 0 24px; padding:0; }
+        .nav-tabs li a {
+            display:block; color:#888; text-decoration:none;
+            border-bottom:2px solid transparent;
+            padding:10px 16px; font-size:0.88em; font-weight:500;
+            transition:color 0.15s;
+        }
+        .nav-tabs li a:hover { color:#ccc; border-bottom-color:#444; }
+        .nav-tabs li.active a { color:#fff; border-bottom-color:#fff; }
+        .tab-pane { display:none; }
+        .tab-pane.active { display:block; }
+
+        /* ── Update panel ── */
+        .panel {
+            background:#1a1a1a; border:1px solid #2e2e2e; border-radius:8px;
+            padding:16px 20px; max-width:560px;
+        }
+        .panel + .panel { margin-top:16px; }
+        .panel-row { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+        .panel-row:last-child { margin-bottom:0; }
+        .panel-label { font-size:0.8em; color:#555; min-width:90px; }
+    </style>
+</head>
+<body>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+        <h1>{{ t.admin_title }}</h1>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <a href="/admin" style="font-size:0.8em;color:#555;text-decoration:none;border:1px solid #333;padding:4px 10px;border-radius:4px;" onmouseover="this.style.color='#aaa';this.style.borderColor='#666'" onmouseout="this.style.color='#555';this.style.borderColor='#333'">↻</a>
+            <a href="/logout" style="font-size:0.8em;color:#555;text-decoration:none;border:1px solid #333;padding:4px 10px;border-radius:4px;" onmouseover="this.style.color='#aaa';this.style.borderColor='#666'" onmouseout="this.style.color='#555';this.style.borderColor='#333'">{{ t.logout }}</a>
+        </div>
+    </div>
+
+    <ul class="nav-tabs" id="main-tabs">
+        <li class="active"><a href="#tab-meets">{{ t.active_meets }}</a></li>
+        <li><a href="#tab-organizers">{{ t.organizers }}</a></li>
+        <li><a href="#tab-appearance">{{ t.get('tab_appearance', 'Appearance') }}</a></li>
+        <li><a href="#tab-update">{{ t.get('tab_update', 'Update & Backup') }}</a></li>
+        <li><a href="#tab-debug">{{ t.get('tab_debug', 'Debug') }}</a></li>
+        <li><a href="#tab-account">{{ t.get('tab_account', 'Account') }}</a></li>
+    </ul>
+
+    <div class="tab-content">
+
+        <!-- ── Live Meets ── -->
+        <div class="tab-pane active" id="tab-meets">
+            <table>
+                <thead><tr><th>{{ t.col_meet }}</th><th>{{ t.col_location }}</th><th>{{ t.col_sport }}</th><th>{{ t.col_organizer }}</th><th>{{ t.col_language }}</th><th>{{ t.col_since }}</th></tr></thead>
+                <tbody>
+                {% if active_meets %}
+                    {% for m in active_meets %}
+                    <tr>
+                        <td>{{ m.name or '—' }} <span class="badge badge-live">{{ t.badge_live }}</span></td>
+                        <td>{{ m.location or '—' }}</td>
+                        <td>{{ m.sport or '—' }}</td>
+                        <td>{{ m.organizer }}</td>
+                        <td>{{ m.language or '—' }}</td>
+                        <td>{{ m.connected_at }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr class="empty-row"><td colspan="6">{{ t.no_meets_admin }}</td></tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ── Organizers ── -->
+        <div class="tab-pane" id="tab-organizers">
+            <table>
+                <thead><tr><th>{{ t.col_organizer }}</th><th>{{ t.col_key }}</th><th>{{ t.col_created }}</th><th>{{ t.col_status }}</th><th></th></tr></thead>
+                <tbody>
+                {% if keys %}
+                    {% for key, info in keys.items() %}
+                    <tr>
+                        <td>{{ info.organizer }}</td>
+                        <td>
+                            <span class="key-display">{{ key[:12] }}…</span>
+                            <button class="copy" data-copied="{{ t['copied'] }}" onclick="copyKey(this, '{{ key }}')">{{ t['copy'] }}</button>
+                        </td>
+                        <td>{{ info.created }}</td>
+                        <td><span class="badge {{ 'badge-active' if info.active else 'badge-inactive' }}">{{ t.badge_active if info.active else t.badge_revoked }}</span></td>
+                        <td style="white-space:nowrap;">
+                            {% if info.active %}
+                            <form method="post">
+                                <input type="hidden" name="action" value="revoke">
+                                <input type="hidden" name="key" value="{{ key }}">
+                                <button type="submit" class="danger">{{ t.revoke }}</button>
+                            </form>
+                            {% endif %}
+                            <form method="post" style="margin-left:4px;">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="key" value="{{ key }}">
+                                <button type="submit" class="danger">{{ t.delete }}</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr class="empty-row"><td colspan="5">{{ t.no_organizers }}</td></tr>
+                {% endif %}
+                </tbody>
+            </table>
+
+            <h2 style="margin-top:8px;">{{ t.add_organizer }}</h2>
+            <form method="post" class="add-form">
+                <input type="hidden" name="action" value="add">
+                <input type="text" name="organizer" placeholder="{{ t.org_placeholder }}" required autocomplete="off">
+                <button type="submit">{{ t.generate_key }}</button>
+            </form>
+            <p class="note">{{ t.key_note }}</p>
+        </div>
+
+        <!-- ── Appearance ── -->
+        <div class="tab-pane" id="tab-appearance">
+            <div class="panel">
+                <h2 style="margin-bottom:14px;">{{ t.language }}</h2>
+                <form method="post" id="locale-form">
+                    <input type="hidden" name="action" value="change_locale">
+                    <select name="locale" class="field" onchange="this.form.submit()">
+                        <option value="" {% if not current_locale %}selected{% endif %}>{{ t.language_auto }}</option>
+                        {% for code, name in locales %}
+                        <option value="{{ code }}" {% if current_locale == code %}selected{% endif %}>{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+        </div>
+
+        <!-- ── Update & Backup ── -->
+        <div class="tab-pane" id="tab-update">
+            {% if has_deploy %}
+            <div class="panel">
+                <h2 style="margin-bottom:14px;">{{ t.get('update', 'Update') }}</h2>
+                <div class="panel-row">
+                    <span class="panel-label" style="color:#444;">Current</span>
+                    <span id="current-version" style="font-family:monospace;font-size:0.85em;color:#666;">—</span>
+                </div>
+                <div class="panel-row">
+                    <span class="panel-label">{{ t.get('version', 'Version') }}</span>
+                    <select id="update-version" class="field" style="flex:1;">
+                        <option value="latest">Latest release</option>
+                        <option value="master">Master</option>
+                    </select>
+                </div>
+                <div class="panel-row">
+                    <span class="panel-label"></span>
+                    <button id="update-btn" onclick="triggerUpdate()" style="border-color:#1a3a5c;color:#5ab4e8;">{{ t.get('update', 'Update') }}</button>
+                    <span id="update-status" style="font-size:0.85em;color:#666;"></span>
+                </div>
+                <pre id="update-output" style="display:none;background:#111;color:#e0e0e0;padding:10px 14px;border-radius:4px;min-height:80px;max-height:360px;overflow-y:auto;font-size:0.8em;margin-top:4px;white-space:pre-wrap;word-break:break-all;"></pre>
+            </div>
+            {% endif %}
+            <div class="panel" style="margin-top:16px;">
+                <h2 style="margin-bottom:14px;">{{ t.get('backup', 'Backup') }}</h2>
+                <div class="panel-row">
+                    <span class="panel-label" style="color:#444;">{{ t.get('backup_keys', 'Keys') }}</span>
+                    <a id="backup-download-btn" href="/admin/backup/keys" style="font-size:0.8em;border:1px solid #333;color:#aaa;padding:4px 10px;border-radius:4px;text-decoration:none;" onmouseover="this.style.color='#fff';this.style.borderColor='#666'" onmouseout="this.style.color='#aaa';this.style.borderColor='#333'">{{ t.get('download_backup', 'Download') }}</a>
+                </div>
+                <div class="panel-row" style="align-items:flex-start;flex-direction:column;gap:6px;">
+                    <span style="font-size:0.78em;color:#555;">{{ t.get('restore_keys_note', 'Restore a previously downloaded keys backup. This replaces all current keys.') }}</span>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <label style="display:inline-block;font-size:0.8em;border:1px solid #333;color:#aaa;padding:4px 10px;border-radius:4px;cursor:pointer;" onmouseover="this.style.color='#fff';this.style.borderColor='#666'" onmouseout="this.style.color='#aaa';this.style.borderColor='#333'">
+                            {{ t.get('restore_backup', 'Restore…') }}<input type="file" accept=".json" style="display:none;" onchange="restoreKeys(this)">
+                        </label>
+                        <span id="restore-status" style="font-size:0.85em;color:#666;"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Debug ── -->
+        <div class="tab-pane" id="tab-debug">
+            <div class="panel" style="max-width:none;">
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+                    <select id="log-source" class="field" onchange="loadLogs()">
+                        <option value="app">App container</option>
+                        <option value="caddy">Caddy</option>
+                        <option value="webhook">Deploy webhook</option>
+                    </select>
+                    <button onclick="loadLogs()">Refresh</button>
+                    <label style="display:flex;align-items:center;gap:5px;font-size:0.85em;color:#666;cursor:pointer;">
+                        <input type="checkbox" id="log-follow" onchange="toggleFollow()"> Follow
+                    </label>
+                    <span id="log-status" style="font-size:0.78em;color:#555;margin-left:auto;"></span>
+                </div>
+                <pre id="log-output" style="background:#111;color:#e0e0e0;padding:10px 14px;border-radius:4px;height:480px;overflow-y:auto;font-size:0.78em;margin:0;white-space:pre-wrap;word-break:break-all;"></pre>
+            </div>
+        </div>
+
+        <!-- ── Account ── -->
+        <div class="tab-pane" id="tab-account">
+            <div class="panel">
+                <h2 style="margin-bottom:14px;">{{ t.change_credentials }}</h2>
+                {% if creds_error %}<p style="color:#f66;font-size:0.85em;margin-bottom:12px;">{{ creds_error }}</p>{% endif %}
+                <form method="post" style="display:flex;flex-direction:column;gap:8px;max-width:280px;">
+                    <input type="hidden" name="action" value="change_credentials">
+                    <input type="password" name="current_password" placeholder="{{ t.current_password }}" required autocomplete="current-password">
+                    <input type="text"     name="new_user"         placeholder="{{ t.new_username }}"    autocomplete="username">
+                    <input type="password" name="new_password"     placeholder="{{ t.new_password }}"    required autocomplete="new-password">
+                    <input type="password" name="new_password2"    placeholder="{{ t.confirm_password }}" required autocomplete="new-password">
+                    <div><button type="submit">{{ t.save }}</button></div>
+                </form>
+            </div>
+        </div>
+
+    </div><!-- /.tab-content -->
+
+    <script>
+        // ── Tab switching ──────────────────────────────────────────────────────
+        function showTab(hash) {
+            const target = hash || '#tab-meets';
+            document.querySelectorAll('.nav-tabs li').forEach(li => li.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            const a = document.querySelector('.nav-tabs a[href="' + target + '"]');
+            const pane = document.querySelector(target);
+            if (a && pane) { a.parentElement.classList.add('active'); pane.classList.add('active'); }
+        }
+        document.querySelectorAll('.nav-tabs a').forEach(a => {
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                showTab(a.getAttribute('href'));
+                history.replaceState(null, '', a.getAttribute('href'));
+            });
+        });
+        showTab(location.hash);
+        {% if creds_error %}showTab('#tab-account');{% endif %}
+
+        // ── Copy key ──────────────────────────────────────────────────────────
+        function copyKey(btn, key) {
+            const orig   = btn.textContent;
+            const copied = btn.dataset.copied || 'Copied!';
+            navigator.clipboard.writeText(key).then(() => {
+                btn.textContent = copied; btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+
+        {% if has_deploy %}
+        // ── Version list ──────────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', loadVersions);
+        function loadVersions() {
+            fetch('/admin/versions')
+                .then(r => r.json())
+                .then(d => {
+                    if (!d.ok) return;
+                    const cur = document.getElementById('current-version');
+                    if (cur) cur.textContent = d.current || 'untagged';
+                    const sel = document.getElementById('update-version');
+                    sel.innerHTML = '<option value="latest">Latest release</option>';
+                    d.versions.forEach(v => {
+                        const opt = document.createElement('option');
+                        opt.value = v;
+                        opt.textContent = v + (v === d.current ? '  ← current' : '');
+                        sel.appendChild(opt);
+                    });
+                    sel.appendChild(Object.assign(document.createElement('option'),
+                        { value: 'master', textContent: 'Master' }));
+                    if (d.current) {
+                        const match = [...sel.options].find(o => o.value === d.current);
+                        if (match) match.selected = true;
+                    }
+                })
+                .catch(() => {});
+        }
+
+        // ── Update ────────────────────────────────────────────────────────────
+        function triggerUpdate() {
+            const version = document.getElementById('update-version').value;
+            const label   = version === 'master' ? 'master branch' : version === 'latest' ? 'latest release' : version;
+            if (!confirm('Pull ' + label + ' from GitHub and rebuild the server?')) return;
+
+            const btn    = document.getElementById('update-btn');
+            const status = document.getElementById('update-status');
+            const out    = document.getElementById('update-output');
+            const origLabel = btn.textContent;
+
+            btn.disabled = true;
+            out.textContent = '';
+            out.style.display = 'block';
+            status.style.color = '#888';
+            status.textContent = 'Starting…';
+
+            let seen = 0;
+
+            function pollLog() {
+                fetch('/admin/update_log')
+                    .then(r => r.json())
+                    .then(d => {
+                        const newLines = d.lines.slice(seen);
+                        if (newLines.length) {
+                            out.textContent += newLines.join('\n') + '\n';
+                            out.scrollTop = out.scrollHeight;
+                            seen = d.lines.length;
+                        }
+                        if (d.done === null) {
+                            setTimeout(pollLog, 800);
+                        } else if (d.done) {
+                            status.style.color = '#4a4';
+                            status.textContent = 'Done — server restarting…';
+                            setTimeout(() => {
+                                const ping = setInterval(() => {
+                                    fetch('/ping').then(r => {
+                                        if (r.ok) { clearInterval(ping); location.reload(); }
+                                    }).catch(() => {});
+                                }, 2000);
+                            }, 3000);
+                        } else {
+                            status.style.color = '#c55';
+                            status.textContent = 'Update failed — see output above.';
+                            btn.disabled = false;
+                            btn.textContent = origLabel;
+                        }
+                    })
+                    .catch(() => setTimeout(pollLog, 2000)); // retry through container restart
+            }
+
+            const body = new FormData(); body.append('version', version);
+            fetch('/admin/update', { method: 'POST', body })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        btn.disabled = false; btn.textContent = origLabel;
+                        status.textContent = 'Error: ' + data.error; return;
+                    }
+                    btn.textContent = 'Updating…';
+                    status.textContent = 'Running…';
+                    setTimeout(pollLog, 1000);
+                })
+                .catch(() => {
+                    btn.disabled = false; btn.textContent = origLabel;
+                    status.textContent = 'Could not reach server.';
+                });
+        }
+        {% endif %}
+
+        // ── Restore keys ──────────────────────────────────────────────────────
+        function restoreKeys(input) {
+            const status = document.getElementById('restore-status');
+            if (!input.files.length) return;
+            if (!confirm('This will replace all current organizer keys. Are you sure?')) {
+                input.value = ''; return;
+            }
+            status.style.color = '#888'; status.textContent = 'Uploading…';
+            const form = new FormData(); form.append('keys_file', input.files[0]);
+            fetch('/admin/restore/keys', { method: 'POST', body: form })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.ok) {
+                        status.style.color = '#4a4';
+                        status.textContent = d.count + ' key(s) restored.';
+                    } else {
+                        status.style.color = '#c55';
+                        status.textContent = 'Error: ' + d.error;
+                    }
+                    input.value = '';
+                })
+                .catch(() => { status.style.color = '#c55'; status.textContent = 'Upload failed.'; input.value = ''; });
+        }
+
+        // ── Debug logs ────────────────────────────────────────────────────────
+        let _followTimer = null;
+
+        function loadLogs() {
+            const source = document.getElementById('log-source').value;
+            const out    = document.getElementById('log-output');
+            const status = document.getElementById('log-status');
+            const wasAtBottom = out.scrollHeight - out.scrollTop <= out.clientHeight + 40;
+            fetch('/admin/logs?source=' + source + '&tail=300')
+                .then(r => r.json())
+                .then(d => {
+                    if (!d.ok) { status.textContent = 'Error: ' + (d.error || '?'); return; }
+                    out.textContent = d.lines.join('\n');
+                    if (wasAtBottom) out.scrollTop = out.scrollHeight;
+                    status.textContent = new Date().toLocaleTimeString();
+                })
+                .catch(() => { status.textContent = 'Failed'; });
+        }
+
+        function toggleFollow() {
+            clearInterval(_followTimer); _followTimer = null;
+            if (document.getElementById('log-follow').checked) {
+                loadLogs();
+                _followTimer = setInterval(loadLogs, 3000);
+            }
+        }
+
+        document.querySelector('.nav-tabs a[href="#tab-debug"]').addEventListener('click', () => {
+            setTimeout(loadLogs, 50);
+        });
+    </script>
+</body>
+</html>

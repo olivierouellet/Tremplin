@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ meet_info.name or 'Meet Preview' }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+<style>
+body {
+    background: #0d0d0d;
+    color: #d0d0d0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.container { max-width: 900px; padding-top: 20px; padding-bottom: 40px; }
+
+.lp-header { margin-bottom: 20px; }
+.lp-app-label { font-size: 0.72em; font-weight: 600; letter-spacing: .1em;
+                text-transform: uppercase; color: #666; margin-bottom: 2px; }
+.lp-meet-title { font-size: 1.3em; font-weight: 700; color: #fff; margin: 0 0 4px; }
+.lp-meta { font-size: 0.82em; color: #888; }
+.lp-meta span + span::before { content: " \00b7 "; }
+
+.ev-group { margin-bottom: 22px; }
+.ev-label {
+    font-size: 0.72em; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: #5a9bd5;
+    border-bottom: 1px solid #2a3a50;
+    padding-bottom: 4px; margin-bottom: 8px;
+}
+
+.heat-card {
+    background: #1a1a1a;
+    border: 1px solid #2e2e2e;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    overflow: hidden;
+}
+.heat-card-header {
+    background: #1f2d3d;
+    color: #d0d0d0;
+    padding: 5px 12px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 0.82em;
+    border-bottom: 1px solid #2e2e2e;
+}
+.heat-badge {
+    background: #2a4a7f; border-radius: 3px;
+    padding: 1px 7px; font-weight: 700; white-space: nowrap; color: #aac8ff;
+}
+.heat-time { color: #7bc47b; font-weight: 700; font-size: 1.1em; }
+
+.heat-card table { margin: 0; border: none; width: 100%; border-collapse: collapse; }
+.heat-card thead th {
+    background: #141414;
+    border-bottom: 1px solid #2e2e2e;
+    font-size: 0.7em; letter-spacing: .05em; text-transform: uppercase;
+    color: #666; padding: 4px 10px; font-weight: 600;
+}
+.heat-card tbody td {
+    padding: 4px 10px;
+    border-bottom: 1px solid #222;
+    color: #ccc;
+    vertical-align: middle;
+    font-size: 0.85em;
+}
+.heat-card tbody tr:last-child td { border-bottom: none; }
+.heat-card tbody tr:nth-child(even) td { background: #141414; }
+.swimmer-ol {
+    margin: 2px 0 0; padding-left: 16px;
+    font-size: 0.85em; color: #888; line-height: 1.5;
+}
+
+.action-bar { margin-top: 24px; display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-action {
+    background: #2a2a2a; color: #ccc; border: 1px solid #3a3a3a;
+    border-radius: 6px; padding: 6px 16px; font-size: 0.88em;
+    text-decoration: none; display: inline-block; cursor: pointer;
+}
+.btn-action:hover { background: #333; color: #fff; text-decoration: none; }
+.btn-print { background: #1e4d2b; color: #7bc47b; border: 1px solid #2a6038; }
+.btn-print:hover { background: #255c33; color: #9be89b; }
+
+@media print {
+    body { background: #fff; color: #000; font-size: 9pt; }
+    .no-print { display: none !important; }
+    .container { max-width: 100%; padding: 0; }
+    .heat-card { border: 1px solid #bbb; border-radius: 0; margin-bottom: 4px;
+                 page-break-inside: avoid; background: #fff; }
+    .heat-card-header { background: #2c3e50 !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                        color: #fff !important; padding: 3px 8px; }
+    .heat-card-header * { color: #fff !important; }
+    .heat-card thead th,
+    .heat-card tbody td { padding: 3px 8px; color: #000; background: #fff !important; }
+    .ev-label { color: #3a7bd5; border-color: #3a7bd5; page-break-after: avoid; }
+    .lp-meet-title { color: #000; }
+    .lp-meta { color: #444; }
+    @page { margin: 1.5cm; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px;" class="no-print">
+        <div class="lp-header" style="margin-bottom:0;">
+            <div class="lp-app-label">Tremplin</div>
+            <div class="lp-meet-title">
+                {{ meet_info.name or strings.get('no_file', 'Meet Preview') }}
+                {% if meet_info.get('city') %}
+                <span style="font-weight:400; color:#888; font-size:.7em;">— {{ meet_info.city }}</span>
+                {% endif %}
+            </div>
+            <div class="lp-meta">
+                {% if meet_info.get('pool') %}<span>{{ meet_info.pool }}</span>{% endif %}
+                {% for s in meet_info.get('sessions', []) %}
+                <span>{{ s.date }}{% if s.daytime %} {{ s.daytime }}{% if s.endtime %}&ndash;{{ s.endtime }}{% endif %}{% endif %}{% if s.warmupfrom %} ({{ strings.get('warmup', 'warm-up') }} {{ s.warmupfrom }}{% if s.warmupuntil %}&ndash;{{ s.warmupuntil }}{% endif %}){% endif %}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% if not kiosk %}
+        <button onclick="window.print()" title="{{ strings.get('print', 'Print') }}"
+                style="margin-top:4px; flex-shrink:0; background:none; border:none; cursor:pointer; color:#7bc47b; font-size:1.4em; padding:2px 4px; line-height:1;">&#x1F5A8;</button>
+        {% endif %}
+    </div>
+
+    <!-- Print-only header -->
+    <div class="lp-header" style="display:none;" id="print-header">
+        <div class="lp-app-label">Tremplin</div>
+        <div class="lp-meet-title">
+            {{ meet_info.name or strings.get('no_file', 'Meet Preview') }}
+            {% if meet_info.get('city') %} — {{ meet_info.city }}{% endif %}
+        </div>
+        <div class="lp-meta">
+            {% if meet_info.get('pool') %}<span>{{ meet_info.pool }}</span>{% endif %}
+            {% for s in meet_info.get('sessions', []) %}
+            <span>{{ s.date }}{% if s.daytime %} {{ s.daytime }}{% if s.endtime %}&ndash;{{ s.endtime }}{% endif %}{% endif %}</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if not events_grouped %}
+    <p style="color:#666; font-size:0.9em;">{{ strings.get('no_file', 'No meet file loaded.') }}</p>
+    {% endif %}
+
+    {% for event, heats in events_grouped %}
+    <div class="ev-group">
+        <div class="ev-label">
+            {{ labels.event }} {{ event }}{% if event in event_names %} &mdash; {{ event_names[event] }}{% endif %}
+        </div>
+
+        {% for heat in heats %}
+        <div class="heat-card">
+            <div class="heat-card-header">
+                <span class="heat-badge">{{ labels.heat }} {{ heat }}</span>
+                <span class="heat-time">{{ heat_times.get(event, {}).get(heat, '') }}</span>
+            </div>
+            <table>
+                <thead><tr>
+                    <th style="width:44px;">{{ labels.lane }}</th>
+                    <th>{{ labels.name }}</th>
+                    <th style="width:88px;">{{ labels.club }}</th>
+                    <th style="width:100px;">{{ strings.get('seed_time', 'Seed Time') }}</th>
+                </tr></thead>
+                <tbody>
+                {% for lane in start_list[event][heat] | sort %}
+                    {% set entry = start_list[event][heat][lane] %}
+                    <tr>
+                        <td>{{ lane }}</td>
+                        <td>
+                            {{ entry.name }}
+                            {% if entry.get('swimmers') %}
+                            <ol class="swimmer-ol">
+                                {% for sw in entry.swimmers %}<li>{{ sw.name }}</li>{% endfor %}
+                            </ol>
+                            {% endif %}
+                        </td>
+                        <td>{{ entry.club }}</td>
+                        <td>{{ entry.seed_time }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+
+</div>
+<style>
+@media print { #print-header { display: block !important; } }
+</style>
+<script src="{{ url_for('static', filename='js/jquery-1.12.4.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+</body>
+</html>

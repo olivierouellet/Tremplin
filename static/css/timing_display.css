@@ -1,0 +1,332 @@
+@font-face {
+    font-family: 'Overpass Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/OverpassMono-Regular.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'DSEG7Classic';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/DSEG7Classic-Regular.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Share Tech Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/ShareTechMono-Regular.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Orbitron';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/Orbitron-Regular.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Roboto Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/RobotoMono-Regular.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'DSEG14Classic';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/DSEG14Classic-Regular.woff2') format('woff2');
+}
+
+/* ── Theme defaults (overridden by per-page <style> block) ─────────────────── */
+
+:root {
+    --color-bg:            #0d0d0d;
+    --color-header-bg:     #1a1a1a;
+    --color-header-border: #2e2e2e;
+    --color-header-label:  #ffffff;
+    --color-header-value:  #e0e0e0;
+    --color-th-text:       #666666;
+    --color-th-bg:         #1a1a1a;
+    --color-row-odd:       #141414;
+    --color-row-even:      #202020;
+    --color-row-text:      #e0e0e0;
+    --color-time:          #FFD700;
+    --color-delta-better:  #4CAF50;
+    --color-delta-worse:   #808080;
+    --color-podium-gold:   #545454;
+    --color-podium-silver: #424242;
+    --color-podium-bronze: #343434;
+    --font-family:         'Overpass Mono';
+    --font-digits:         'DSEG7Classic';
+    --font-timing:         'Overpass Mono';
+}
+
+/* ── Reset ────────────────────────────────────────────────────────────────── */
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--color-bg);
+    font-family: var(--font-family), monospace;
+}
+
+/* ── Main layout — flex column, full screen ───────────────────────────────── */
+
+.timing-outer {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 100;
+}
+
+/* ── Header bar — one flex cell per item ──────────────────────────────────── */
+
+.timing-header-bar {
+    display: flex;
+    align-items: stretch;
+    flex-shrink: 0;
+    background-color: var(--color-header-bg);
+}
+
+.header_cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.8vh 2vw;
+    border-left: 1px solid var(--color-header-border);
+    white-space: nowrap;
+    transition: opacity 0.6s;
+}
+
+.header_cell:first-child { border-left: none; }
+
+/* meet-title and event-name cells expand to fill remaining space */
+.header_cell_grow { flex: 1; align-items: flex-start; }
+.header_cell_name { flex: 1; background-color: var(--color-header-bg); align-items: center; }
+
+.header_label {
+    font-size: 1.8vh;
+    color: var(--color-header-label);
+    letter-spacing: 0.08em;
+}
+
+.header_value {
+    font-size: 4vh;
+    color: var(--color-header-value);
+}
+
+/* DSEG7 for the event/heat number digits */
+#current_event, #current_heat {
+    font-family: var(--font-digits), monospace;
+    font-size: 4.5vh;
+    color: var(--color-header-label);
+}
+
+/* ── Scoreboard table — fills remaining height ────────────────────────────── */
+
+.timing-content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    transition: opacity 0.5s;
+}
+
+#timing-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.timing-table {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    border-spacing: 0;
+    table-layout: fixed;
+}
+
+table.timing-table td {
+    overflow: hidden;
+    white-space: pre;
+    max-width: 0px;
+    width: 0px;
+    transition: background-color 0.5s ease, transform 0.5s ease;
+}
+
+table.timing-table th {
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.timing-header {
+    font-size: 3vh;
+    color: var(--color-th-text);
+    background-color: var(--color-th-bg);
+}
+
+.timing-row-odd {
+    font-size: 5vh;
+    color: var(--color-row-text);
+    background-color: var(--color-row-odd);
+}
+
+.timing-row-even {
+    font-size: 5vh;
+    color: var(--color-row-text);
+    background-color: var(--color-row-even);
+}
+
+/* ── DSEG7Classic for lane numbers and place/position only ───────────────── */
+
+table.timing-table tbody td:first-child,
+[id^="lane_place"] {
+    font-family: var(--font-digits), monospace;
+}
+
+/* ── Column widths — place and time are animated, name fills the rest ─────── */
+
+.timing-anim { transition: width 0.5s ease, max-width 0.5s ease, transform 0.5s ease; }
+
+.lane-column  { width: 5vw; }
+.place-column { width: 0; max-width: 0; }
+.time-column  { width: 0; max-width: 0; }
+.delta-column { width: 0; max-width: 0; }
+.club-column  { width: 8vw; padding-right: 1vw; }
+[id^="lane_club"]     { padding-right: 1vw; }
+/* name column: no explicit width — fills remaining space; padding centers content symmetrically */
+#name-column,
+.lane-name-cell       { padding: 0 2vw; white-space: normal; vertical-align: middle; }
+
+.name-sub {
+    display: block;
+    font-size: 0.7em;
+    opacity: 0.7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+.name-sub:empty { display: none; }
+
+/* ── Display toggles ─────────────────────────────────────────────────────── */
+
+.timing-table.hide-lane-header .lane-column { visibility: hidden; }
+.timing-table.hide-name-header #name-column { visibility: hidden; }
+.timing-table.hide-club-header .club-column { visibility: hidden; }
+.timing-table.hide-time-header #time-column { visibility: hidden; }
+.timing-table.hide-delta-header #delta-column { visibility: hidden; }
+.timing-table.hide-position-header #place-column { visibility: hidden; }
+
+.timing-table.hide-name #name-column,
+.timing-table.hide-name .lane-name-cell { display: none; }
+
+.timing-table.hide-club .club-column,
+.timing-table.hide-club [id^="lane_club"] { display: none; }
+
+.timing-table.hide-delta #delta-column,
+.timing-table.hide-delta .td_delta { display: none; }
+
+.timing-table.hide-position #place-column,
+.timing-table.hide-position [id^="lane_place"] { display: none; }
+
+/* ── Test session overlay ─────────────────────────────────────────────────── */
+
+.test-overlay {
+    position: fixed;
+    bottom: 2.5vh;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--color-bg);
+    padding: 0.6vh 2.5vw;
+    border-radius: 6px;
+    font-size: 2.2vh;
+    font-weight: bold;
+    letter-spacing: 0.15em;
+    z-index: 200;
+    pointer-events: none;
+    white-space: nowrap;
+    isolation: isolate;
+}
+.test-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: var(--color-row-text);
+    opacity: 0.75;
+    border-radius: 6px;
+    z-index: -1;
+}
+
+/* ── Background (splash image) ────────────────────────────────────────────── */
+
+.background {
+    background-color: var(--color-bg);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -100;
+}
+
+#splash_img {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 150;
+    object-fit: contain;
+    transition: opacity 3.0s ease;
+}
+
+/* ── Test controls ────────────────────────────────────────────────────────── */
+
+.controls {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+}
+
+/* ── Time column — yellow; on podium rows the !important below overrides it ── */
+
+#time-column,
+.td_time { color: var(--color-time); font-family: var(--font-timing), monospace; }
+
+/* ── Time lock animation ──────────────────────────────────────────────────── */
+
+[id^="lane_time"].time-running { color: #a0a0a0; }
+
+@keyframes time-lock-flash {
+    0%   { color: #ffffff; }
+    100% { color: var(--color-time); }
+}
+[id^="lane_time"].time-locked { animation: time-lock-flash 0.8s ease-out forwards; }
+
+/* ── Seed-time delta ─────────────────────────────────────────────────────── */
+
+.td_delta { font-size: 5vh; padding-right: 0.5vw; font-family: var(--font-timing), monospace; }
+.delta-better { color: var(--color-delta-better); }
+.delta-worse  { color: var(--color-delta-worse); }
+
+/* ── Podium highlight ─────────────────────────────────────────────────────── */
+
+tr.podium-gold   td { background-color: var(--color-podium-gold) !important; }
+tr.podium-silver td { background-color: var(--color-podium-silver) !important; }
+tr.podium-bronze td { background-color: var(--color-podium-bronze) !important; }

@@ -1,0 +1,269 @@
+import datetime
+import io
+import os
+import re
+import subprocess
+import tarfile
+
+import flask
+import flask_login
+from flask import Blueprint
+
+import state
+from extensions import socketio
+
+bp = Blueprint('system', __name__)
+
+_VERSION_RE = re.compile(r'^v\d{4}\.\d{2}\.\d+$')
+
+
+def _find_uv():
+    import shutil
+    uv = shutil.which('uv')
+    if uv:
+        return uv
+    for p in [os.path.expanduser('~/.local/bin/uv'),
+              os.path.expanduser('~/.cargo/bin/uv'),
+              '/usr/local/bin/uv']:
+        if os.path.isfile(p):
+            return p
+    return 'uv'
+
+
+_UV = _find_uv()
+
+
+# ── Time ───────────────────────────────────────────────────────────────────────
+
+@bp.route('/time_status')
+@flask_login.login_required
+def route_time_status():
+    now          = datetime.datetime.now()
+    ntp_active   = False
+    synchronized = False
+    timezone     = ''
+    try:
+        result = subprocess.run(['timedatectl'], capture_output=True, text=True, timeout=5)
+        for line in result.stdout.splitlines():
+            ll = line.lower()
+            if 'ntp service' in ll:
+                ntp_active = 'active' in ll
+            if 'system clock synchronized' in ll:
+                synchronized = 'yes' in ll
+            if 'time zone' in ll:
+                m = re.search(r'Time zone:\s+\S+\s+\((\w+)', line)
+                if m:
+                    timezone = m.group(1)
+    except Exception:
+        pass
+    return flask.jsonify({
+        'date':         now.strftime('%Y-%m-%d'),
+        'time':         now.strftime('%H:%M:%S'),
+        'timezone':     timezone,
+        'ntp_active':   ntp_active,
+        'synchronized': synchronized,
+    })
+
+
+@bp.route('/time_sync', methods=['POST'])
+@flask_login.login_required
+def route_time_sync():
+    try:
+        subprocess.run(['sudo', 'timedatectl', 'set-ntp', 'true'], timeout=5, check=True)
+        subprocess.run(['sudo', 'systemctl', 'restart', 'systemd-timesyncd'], timeout=5)
+        return flask.jsonify({'ok': True})
+    except Exception as e:
+        return flask.jsonify({'ok': False, 'error': str(e)})
+
+
+@bp.route('/time_set', methods=['POST'])
+@flask_login.login_required
+def route_time_set():
+    data     = flask.request.get_json()
+    date_str = data.get('date', '')
+    time_str = data.get('time', '')
+    if not re.match(r'^\d{4}-\d{2}-\d{2}$', date_str) or \
+       not re.match(r'^\d{2}:\d{2}(:\d{2})?$', time_str):
+        return flask.jsonify({'ok': False, 'error': 'Invalid date or time format'})
+    if len(time_str) == 5:
+        time_str += ':00'
+    try:
+        subprocess.run(['sudo', 'timedatectl', 'set-ntp', 'false'], timeout=5, check=True)
+        subprocess.run(['sudo', 'timedatectl', 'set-time', f'{date_str} {time_str}'],
+                       timeout=5, check=True)
+        return flask.jsonify({'ok': True})
+    except Exception as e:
+        return flask.jsonify({'ok': False, 'error': str(e)})
+
+
+# ── App / OS update ────────────────────────────────────────────────────────────
+
+def _run_cmd_blocking(cmd, cwd=None):
+    proc = subprocess.run(cmd, cwd=cwd,
+                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                          text=True)
+    return proc.stdout, proc.returncode
+
+
+def _run_update(target=None):
+    state._update_log_lines = []
+    state._update_log_done  = None
+
+    def emit(text, error=False):
+        state._update_log_lines.append({'text': text, 'error': error})
+
+    try:
+        emit('$ git fetch --tags\n')
+        out, rc = _run_cmd_blocking(['git', 'fetch', '--tags'], cwd=state.app_dir)
+        if out:
+            emit(out)
+        if rc != 0:
+            emit(f'\nCommand failed (exit code {rc})\n', error=True)
+            state._update_log_done = False
+            return
+
+        if not target:
+            cmds  = [['git', 'checkout', 'master'], ['git', 'pull'], [_UV, 'sync']]
+            label = 'Updated to latest'
+        else:
+            cmds  = [['git', 'checkout', target], [_UV, 'sync']]
+            label = f'Version {target} installed'
+
+        for cmd in cmds:
+            emit('$ ' + ' '.join(cmd) + '\n')
+            out, rc = _run_cmd_blocking(cmd, cwd=state.app_dir)
+            if out:
+                emit(out)
+            if rc != 0:
+                emit(f'\nCommand failed (exit code {rc})\n', error=True)
+                state._update_log_done = False
+                return
+
+        emit(f'\n{label}. Restarting service…\n')
+        state._update_log_done = True
+        socketio.sleep(2)
+        subprocess.run(['sudo', 'systemctl', 'restart', 'tremplin'])
+    except Exception as e:
+        emit(f'\nError: {e}\n', error=True)
+        state._update_log_done = False
+    finally:
+        state._update_in_progress = False
+
+
+def _run_os_update():
+    state._os_update_log_lines = []
+    state._os_update_log_done  = None
+
+    def emit(text, error=False):
+        state._os_update_log_lines.append({'text': text, 'error': error})
+
+    try:
+        for cmd in [['sudo', 'apt-get', 'update'],
+                    ['sudo', 'apt-get', 'upgrade', '-y']]:
+            emit('$ ' + ' '.join(cmd) + '\n')
+            out, rc = _run_cmd_blocking(cmd)
+            if out:
+                emit(out)
+            if rc != 0:
+                emit(f'\nCommand failed (exit code {rc})\n', error=True)
+                state._os_update_log_done = False
+                return
+        emit('\nOS update complete.\n')
+        state._os_update_log_done = True
+    except Exception as e:
+        emit(f'\nError: {e}\n', error=True)
+        state._os_update_log_done = False
+    finally:
+        state._os_update_in_progress = False
+
+
+@bp.route('/version_list')
+@flask_login.login_required
+def route_version_list():
+    try:
+        r = subprocess.run(['git', 'describe', '--tags', '--exact-match', 'HEAD'],
+                           capture_output=True, text=True, cwd=state.app_dir, timeout=8)
+        current = r.stdout.strip() if r.returncode == 0 else ''
+        subprocess.run(['git', 'fetch', '--tags'], capture_output=True,
+                       cwd=state.app_dir, timeout=20)
+        r = subprocess.run(['git', 'tag', '-l', '--sort=-version:refname'],
+                           capture_output=True, text=True, cwd=state.app_dir, timeout=8)
+        tags = [t.strip() for t in r.stdout.splitlines()
+                if t.strip() and _VERSION_RE.match(t.strip())]
+        return flask.jsonify({'ok': True, 'current': current, 'versions': tags})
+    except Exception as e:
+        return flask.jsonify({'ok': False, 'error': str(e)})
+
+
+@bp.route('/update_start', methods=['POST'])
+@flask_login.login_required
+def route_update_start():
+    if state._update_in_progress:
+        return flask.jsonify({'error': 'Update already in progress'}), 409
+    state._update_in_progress = True
+    data   = flask.request.get_json(force=True, silent=True) or {}
+    target = data.get('target') or None
+    socketio.start_background_task(_run_update, target)
+    return flask.jsonify({'ok': True})
+
+
+@bp.route('/os_update_start', methods=['POST'])
+@flask_login.login_required
+def route_os_update_start():
+    if state._os_update_in_progress:
+        return flask.jsonify({'error': 'OS update already in progress'}), 409
+    state._os_update_in_progress = True
+    socketio.start_background_task(_run_os_update)
+    return flask.jsonify({'ok': True})
+
+
+@bp.route('/update_log')
+@flask_login.login_required
+def route_update_log():
+    return flask.jsonify({'lines': state._update_log_lines, 'done': state._update_log_done})
+
+
+@bp.route('/os_update_log')
+@flask_login.login_required
+def route_os_update_log():
+    return flask.jsonify({'lines': state._os_update_log_lines, 'done': state._os_update_log_done})
+
+
+@bp.route('/backup_download')
+@flask_login.login_required
+def route_backup_download():
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode='w:gz') as tar:
+        tar.add(state.SCOREBOARD_DIR, arcname='Tremplin')
+    buf.seek(0)
+    date_str = datetime.datetime.now().strftime('%Y-%m-%d')
+    return flask.send_file(buf, as_attachment=True,
+                           download_name=f'tremplin_backup_{date_str}.tar.gz',
+                           mimetype='application/gzip')
+
+
+@bp.route('/backup_restore', methods=['POST'])
+@flask_login.login_required
+def route_backup_restore():
+    f = flask.request.files.get('backup_file')
+    if not f or not f.filename.endswith('.tar.gz'):
+        return flask.jsonify({'ok': False, 'error': 'Please upload a .tar.gz backup file'}), 400
+    try:
+        buf = io.BytesIO(f.read())
+        with tarfile.open(fileobj=buf, mode='r:gz') as tar:
+            members = tar.getmembers()
+            # Validate all paths stay within home dir (no path traversal)
+            home = os.path.expanduser('~')
+            for m in members:
+                dest = os.path.normpath(os.path.join(home, m.name))
+                if not dest.startswith(home):
+                    return flask.jsonify({'ok': False, 'error': 'Invalid archive path'}), 400
+            tar.extractall(path=home)
+    except Exception as e:
+        return flask.jsonify({'ok': False, 'error': str(e)}), 500
+    # Restart after a short delay so the response can be sent first
+    def _restart():
+        socketio.sleep(1)
+        subprocess.run(['sudo', 'systemctl', 'restart', 'tremplin'])
+    socketio.start_background_task(_restart)
+    return flask.jsonify({'ok': True})

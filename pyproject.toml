@@ -1,0 +1,21 @@
+[project]
+name = "tremplin"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "flask",
+    "flask-login",
+    "flask-socketio",
+    "gevent",
+    "gevent-websocket",
+    "pyserial",
+    "python-socketio[client]",
+    "websocket-client",
+    "pillow",
+]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

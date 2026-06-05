@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Schedule</title>
+    <style>
+        @font-face { font-family: 'Overpass Mono';   font-style: normal; font-weight: 400; font-display: swap; src: url('/static/fonts/OverpassMono-Regular.woff2')   format('woff2'); }
+        @font-face { font-family: 'DSEG7Classic';    font-style: normal; font-weight: 400; font-display: swap; src: url('/static/fonts/DSEG7Classic-Regular.woff2')    format('woff2'); }
+        @font-face { font-family: 'DSEG14Classic';   font-style: normal; font-weight: 400; font-display: swap; src: url('/static/fonts/DSEG14Classic-Regular.woff2')   format('woff2'); }
+        @font-face { font-family: 'Share Tech Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('/static/fonts/ShareTechMono-Regular.woff2')   format('woff2'); }
+        @font-face { font-family: 'Orbitron';        font-style: normal; font-weight: 400; font-display: swap; src: url('/static/fonts/Orbitron-Regular.woff2')        format('woff2'); }
+        @font-face { font-family: 'Roboto Mono';     font-style: normal; font-weight: 400; font-display: swap; src: url('/static/fonts/RobotoMono-Regular.woff2')      format('woff2'); }
+
+        :root {
+            --color-bg:            {{ theme_colors.bg }};
+            --color-header-bg:     {{ theme_colors.header_bg }};
+            --color-header-border: {{ theme_colors.header_border }};
+            --color-header-label:  {{ theme_colors.header_label }};
+            --color-header-value:  {{ theme_colors.header_value }};
+            --color-th-text:       {{ theme_colors.th_text }};
+            --color-th-bg:         {{ theme_colors.th_bg }};
+            --color-row-odd:       {{ theme_colors.row_odd }};
+            --color-row-even:      {{ theme_colors.row_even }};
+            --color-row-text:      {{ theme_colors.row_text }};
+            --color-time:          {{ theme_colors.time }};
+            --color-schedule-event: {{ theme_colors.schedule_event }};
+            --color-schedule-time:  {{ theme_colors.schedule_time }};
+            --color-schedule-name:  {{ theme_colors.schedule_name }};
+            --color-schedule-club:  {{ theme_colors.schedule_club }};
+            --font-family:         '{{ theme_fonts.family }}', monospace;
+            --font-digits:         '{{ theme_fonts.digits }}', monospace;
+            --font-timing:         '{{ theme_fonts.timing }}', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--color-bg);
+            color: var(--color-row-text);
+            font-family: var(--font-family);
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* ── 3-column grid ── */
+        #schedule {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: var(--color-header-border);
+            min-height: 100vh;
+            font-size: clamp(10px, 1.15vw, 16px);
+        }
+
+        /* ── Heat card ── */
+        .heat-card {
+            background: var(--color-bg);
+            min-width: 0;
+        }
+
+        .heat-header {
+            background: var(--color-header-bg);
+            border-bottom: 1px solid var(--color-header-border);
+            padding: 5px 10px;
+        }
+        .heat-title {
+            font-size: 0.9em;
+            color: var(--color-schedule-event);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 2px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .heat-time {
+            color: var(--color-schedule-time);
+            font-size: 1em;
+            font-family: var(--font-timing), monospace;
+        }
+        .heat-name {
+            font-size: 1em;
+            color: var(--color-header-value);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.3;
+        }
+
+        /* ── Swimmer rows ── */
+        .swimmer-row {
+            display: flex;
+            align-items: center;
+            padding: 4px 10px;
+            gap: 6px;
+            border-bottom: 1px solid var(--color-header-border);
+            font-size: 0.9em;
+        }
+        .swimmer-row:nth-child(odd)  { background: var(--color-row-odd); }
+        .swimmer-row:nth-child(even) { background: var(--color-row-even); }
+
+        .lane-num {
+            width: 1.6em;
+            text-align: center;
+            color: var(--color-th-text);
+            flex-shrink: 0;
+            font-size: 0.85em;
+        }
+        .swimmer-name {
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--color-schedule-name);
+        }
+        .swimmer-club {
+            color: var(--color-schedule-club);
+            white-space: nowrap;
+            flex-shrink: 0;
+            margin-left: auto;
+            padding-left: 0.5em;
+        }
+
+        /* ── Current heat highlight ── */
+        .heat-card.heat-current .heat-header {
+            background: var(--color-header-border);
+        }
+        .heat-card.heat-current {
+            outline: 2px solid var(--color-time);
+            outline-offset: -2px;
+        }
+
+        @media (orientation: portrait) and (max-width: 480px) {
+            #schedule { grid-template-columns: 1fr; }
+        }
+
+        /* ── Empty state ── */
+        #waiting {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-th-text);
+            font-size: 1.4em;
+        }
+    </style>
+</head>
+<body>
+
+{% if not events_grouped %}
+<div id="waiting">{{ t.no_meet or 'No meet file loaded' }}</div>
+{% else %}
+<div id="schedule">
+    {% for event, heats in events_grouped %}
+    {% for heat in heats %}
+    <div class="heat-card" data-event="{{ event }}" data-heat="{{ heat }}">
+        <div class="heat-header">
+            <div class="heat-title">
+                <span>{{ labels.event }} {{ event }} — {{ labels.heat }} {{ heat }}</span>
+                {% if heat_times.get(event, {}).get(heat) %}
+                <span class="heat-time">{{ heat_times[event][heat] }}</span>
+                {% endif %}
+            </div>
+            {% if event in event_names %}
+            <div class="heat-name">{{ event_names[event] }}</div>
+            {% endif %}
+        </div>
+        <div class="swimmer-list">
+            {% for lane in start_list[event][heat] | sort %}
+            {% set entry = start_list[event][heat][lane] %}
+            <div class="swimmer-row">
+                <div class="lane-num">{{ lane }}</div>
+                {% if entry.swimmers %}
+                    {% set firstnames = entry.swimmers | map(attribute='first') | select | list %}
+                    <div class="swimmer-name">{{ firstnames | join(' · ') if firstnames else (entry.name or '—') }}</div>
+                {% else %}
+                    <div class="swimmer-name">{{ entry.name or '—' }}</div>
+                {% endif %}
+                {% if entry.club %}
+                <div class="swimmer-club">{{ entry.club }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+    {% endfor %}
+</div>
+{% endif %}
+
+<script src="/static/js/socket.io.min.js"></script>
+<script>
+var sockResults    = io('/results');
+var sockScoreboard = io('/scoreboard');
+var currentEvent = null, currentHeat = null;
+var needsScroll = true;
+
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) needsScroll = true;
+});
+
+sockResults.on('results_snapshot', function(d) {
+    currentEvent = String(d.event).trim();
+    currentHeat  = String(d.heat).trim();
+    highlight();
+});
+
+sockScoreboard.on('update_scoreboard', function(d) {
+    var changed = false;
+    if ('current_event' in d) { currentEvent = String(d.current_event).trim(); changed = true; }
+    if ('current_heat'  in d) { currentHeat  = String(d.current_heat).trim();  changed = true; }
+    if (changed) highlight();
+});
+
+function highlight() {
+    var found = null;
+    document.querySelectorAll('.heat-card').forEach(function(card) {
+        var match = card.dataset.event === currentEvent && card.dataset.heat === currentHeat;
+        card.classList.toggle('heat-current', match);
+        if (match) found = card;
+    });
+    if (found && needsScroll) {
+        found.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        needsScroll = false;
+    }
+}
+</script>
+</body>
+</html>

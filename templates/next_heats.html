@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Next Heats</title>
+    <style>
+        @font-face { font-family: 'Overpass Mono';   font-style: normal; font-weight: 400; font-display: swap; src: url('/static/fonts/OverpassMono-Regular.woff2')   format('woff2'); }
+        @font-face { font-family: 'DSEG7Classic';    font-style: normal; font-weight: 400; font-display: swap; src: url('/static/fonts/DSEG7Classic-Regular.woff2')    format('woff2'); }
+        @font-face { font-family: 'DSEG14Classic';   font-style: normal; font-weight: 400; font-display: swap; src: url('/static/fonts/DSEG14Classic-Regular.woff2')   format('woff2'); }
+        @font-face { font-family: 'Share Tech Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('/static/fonts/ShareTechMono-Regular.woff2')   format('woff2'); }
+        @font-face { font-family: 'Orbitron';        font-style: normal; font-weight: 400; font-display: swap; src: url('/static/fonts/Orbitron-Regular.woff2')        format('woff2'); }
+        @font-face { font-family: 'Roboto Mono';     font-style: normal; font-weight: 400; font-display: swap; src: url('/static/fonts/RobotoMono-Regular.woff2')      format('woff2'); }
+
+        :root {
+            --color-bg:            {{ theme_colors.bg }};
+            --color-header-bg:     {{ theme_colors.header_bg }};
+            --color-header-border: {{ theme_colors.header_border }};
+            --color-header-label:  {{ theme_colors.header_label }};
+            --color-header-value:  {{ theme_colors.header_value }};
+            --color-th-text:       {{ theme_colors.th_text }};
+            --color-th-bg:         {{ theme_colors.th_bg }};
+            --color-row-odd:       {{ theme_colors.row_odd }};
+            --color-row-even:      {{ theme_colors.row_even }};
+            --color-row-text:      {{ theme_colors.row_text }};
+            --color-time:           {{ theme_colors.time }};
+            --color-schedule-event: {{ theme_colors.schedule_event }};
+            --font-family:          '{{ theme_fonts.family }}', monospace;
+            --font-digits:          '{{ theme_fonts.digits }}', monospace;
+            --font-timing:          '{{ theme_fonts.timing }}', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--color-bg);
+            color: var(--color-row-text);
+            font-family: var(--font-family);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ── 3-column grid ── */
+        #columns {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-auto-rows: 1fr;
+            gap: 1px;
+            background: var(--color-header-border);
+            overflow: hidden;
+        }
+
+        .heat-col {
+            background: var(--color-bg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        /* ── Heat header ── */
+        .heat-header {
+            background: var(--color-header-bg);
+            border-bottom: 2px solid var(--color-header-border);
+            padding: 10px 14px;
+            flex-shrink: 0;
+        }
+        .heat-title {
+            font-size: 1.1em;
+            color: var(--color-schedule-event);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .heat-time {
+            color: var(--color-time);
+            font-size: 1.2em;
+            font-family: var(--font-timing), monospace;
+        }
+        .heat-name {
+            font-size: 1.3em;
+            color: var(--color-header-value);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.3;
+        }
+
+        /* ── Swimmer list — fixed grid, always num_lanes rows ── */
+        .swimmer-list {
+            flex: 1;
+            overflow: hidden;
+            display: grid;
+            grid-template-rows: repeat({{ num_lanes }}, 1fr);
+            container-type: size;
+        }
+
+        .swimmer-row {
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 8px;
+            border-bottom: 1px solid var(--color-header-border);
+            overflow: hidden;
+            /* cqh references .swimmer-list height; 1 row = 100/num_lanes cqh */
+            font-size: calc({{ (55 / num_lanes) | round(1) }}cqh);
+        }
+        .swimmer-row:nth-child(odd)  { background: var(--color-row-odd); }
+        .swimmer-row:nth-child(even) { background: var(--color-row-even); }
+
+        .lane-num {
+            width: 1.8em;
+            text-align: center;
+            color: var(--color-th-text);
+            flex-shrink: 0;
+            font-size: 0.7em;
+        }
+        .swimmer-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .swimmer-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+        }
+        .swimmer-sub {
+            font-size: 0.72em;
+            color: var(--color-row-text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.1;
+        }
+        .swimmer-club {
+            color: var(--color-th-text);
+            white-space: nowrap;
+            line-height: 1.1;
+            flex-shrink: 0;
+            margin-left: auto;
+            padding-left: 0.5em;
+        }
+
+        @media (orientation: portrait) {
+            #columns { grid-template-columns: 1fr; }
+        }
+        @media (orientation: landscape) {
+            .swimmer-row { font-size: calc({{ (20 / num_lanes) | round(1) }}cqh); }
+        }
+
+        /* ── Empty / waiting state ── */
+        #waiting {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-th-text);
+            font-size: 1.4em;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="waiting">{{ t.no_meet or 'No meet file loaded' }}</div>
+    <div id="columns" style="display:none;"></div>
+
+    <script src="/static/js/socket.io.min.js"></script>
+    <script>
+    var LABEL_EVENT = {{ (labels.event | default('Event')) | tojson }};
+    var LABEL_HEAT  = {{ (labels.heat  | default('Heat'))  | tojson }};
+    var sock = io('/results');
+    sock.on('reload', function() { location.reload(); });
+
+    sock.on('next_heats', function(d) {
+        render(d.heats);
+    });
+
+    function render(heats) {
+        var cols = document.getElementById('columns');
+        var waiting = document.getElementById('waiting');
+
+        if (!heats || heats.length === 0) {
+            cols.style.display = 'none';
+            waiting.textContent = {{ (t.no_upcoming or 'No upcoming heats') | tojson }};
+            waiting.style.display = 'flex';
+            return;
+        }
+
+        waiting.style.display = 'none';
+        cols.style.display = 'grid';
+        cols.innerHTML = '';
+
+        heats.forEach(function(heat) {
+            var col = document.createElement('div');
+            col.className = 'heat-col';
+
+            var timeHtml = heat.time
+                ? '<span class="heat-time">' + escHtml(heat.time) + '</span>'
+                : '';
+
+            col.innerHTML =
+                '<div class="heat-header">' +
+                    '<div class="heat-title">' +
+                        '<span>' + LABEL_EVENT + ' ' + heat.event + ' — ' + LABEL_HEAT + ' ' + heat.heat + '</span>' +
+                        timeHtml +
+                    '</div>' +
+                    '<div class="heat-name">' + escHtml(heat.event_name || '') + '</div>' +
+                '</div>' +
+                '<div class="swimmer-list">' + buildSwimmers(heat.swimmers) + '</div>';
+
+            cols.appendChild(col);
+        });
+
+        // If fewer than 3 heats, pad with empty columns to maintain grid
+        for (var i = heats.length; i < 3; i++) {
+            var empty = document.createElement('div');
+            empty.className = 'heat-col';
+            cols.appendChild(empty);
+        }
+
+    }
+
+    function buildSwimmers(swimmers) {
+        if (!swimmers || swimmers.length === 0) return '';
+        return swimmers.map(function(s) {
+            var subHtml = s.alt ? '<div class="swimmer-sub">' + escHtml(s.alt) + '</div>' : '';
+            var clubHtml = s.club ? '<div class="swimmer-club">' + escHtml(s.club) + '</div>' : '';
+            return '<div class="swimmer-row">' +
+                '<div class="lane-num">' + s.lane + '</div>' +
+                '<div class="swimmer-info">' +
+                    '<div class="swimmer-name">' + escHtml(s.name || '—') + '</div>' +
+                    subHtml +
+                '</div>' +
+                clubHtml +
+            '</div>';
+        }).join('');
+    }
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    </script>
+</body>
+</html>

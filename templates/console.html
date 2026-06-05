@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Console</title>
+<style>
+@font-face {
+    font-family: 'DSEG7Classic';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/static/fonts/DSEG7Classic-Regular.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Overpass Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/static/fonts/OverpassMono-Regular.woff2') format('woff2');
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+    background: #0a0a0a;
+    color: #d0d0d0;
+    font-family: 'Courier New', monospace;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Scoreboard-style header bar ── */
+#top-bar {
+    display: flex;
+    align-items: stretch;
+    flex-shrink: 0;
+    background: #1a1a1a;
+    border-bottom: 1px solid #2e2e2e;
+}
+.hdr-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.8vh 2vw;
+    border-left: 1px solid #2e2e2e;
+    white-space: nowrap;
+}
+.hdr-cell:first-child { border-left: none; }
+.hdr-cell-name { flex: 1; align-items: center; justify-content: center; }
+.hdr-label {
+    font-size: 1.8vh;
+    color: #ffffff;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.hdr-value {
+    font-size: 4vh;
+    color: #e0e0e0;
+}
+#con-event, #con-heat {
+    font-family: 'DSEG7Classic', monospace;
+    font-size: 4.5vh;
+    color: #ffffff;
+}
+#con-name {
+    font-family: 'Overpass Mono', monospace;
+    font-size: 4vh;
+    color: #e0e0e0;
+}
+#con-length-label {
+    font-size: 1.8vh;
+    color: #ffffff;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+#con-length {
+    font-family: 'Overpass Mono', monospace;
+    font-size: 4vh;
+    color: #e0e0e0;
+}
+#con-place-label {
+    font-size: 1.8vh;
+    color: #ffffff;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+#con-place {
+    font-family: 'Overpass Mono', monospace;
+    font-size: 4vh;
+    color: #e0e0e0;
+}
+.hdr-cell-wide { width: 16vw; flex-shrink: 0; }
+
+/* ── Table ── */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    flex: 1;
+    table-layout: fixed;
+}
+thead th {
+    padding: 5px 12px;
+    border-bottom: 1px solid #2a2a2a;
+    font-weight: normal;
+    white-space: nowrap;
+    overflow: hidden;
+    vertical-align: bottom;
+}
+th.th-lane, th.th-status, th.th-time, th.th-splits, th.th-place {
+    color: #555;
+    font-size: 3vh;
+}
+th.th-lane   { text-align: center; }
+th.th-status { text-align: center; }
+th.th-time   { text-align: center; }
+th.th-splits { text-align: center; }
+th.th-place  { text-align: center; }
+
+/* ── Data cells ── */
+td {
+    padding: 0.3vh 12px;
+    border-bottom: 1px solid #181818;
+    font-size: calc({{ (42 / num_lanes) | round(1) }}vh);
+    white-space: nowrap;
+    overflow: hidden;
+    vertical-align: middle;
+}
+tr.running td { color: #aaa; }
+tr.stopped td { color: #e0e0e0; }
+tr.stopped td.td-time  { color: #FFD700; }
+tr.stopped td.td-place { color: #fff; font-weight: bold; }
+tr.empty td { color: #333; }
+td.td-ch     { color: #444; text-align: center; }
+td.td-status { text-align: center; }
+td.td-time   { text-align: center; }
+td.td-place  { text-align: center; }
+td.td-splits { text-align: center; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<div id="top-bar">
+    <div class="hdr-cell">
+        <span class="hdr-label">Event</span>
+        <span id="con-event">—</span>
+    </div>
+    <div class="hdr-cell">
+        <span class="hdr-label">Heat</span>
+        <span id="con-heat">—</span>
+    </div>
+    <div class="hdr-cell hdr-cell-name">
+        <span id="con-name"></span>
+    </div>
+    <div class="hdr-cell">
+        <span id="con-length-label">Length / Record</span>
+        <span id="con-length">—</span>
+    </div>
+    <div class="hdr-cell hdr-cell-wide">
+        <span id="con-place-label">Place</span>
+        <span id="con-place">—</span>
+    </div>
+    <div class="hdr-cell">
+        <span class="hdr-label">Time (0x16)</span>
+        <span id="con-time22" style="font-family:'DSEG7Classic',monospace;font-size:4.5vh;color:#e0e0e0;">—</span>
+    </div>
+    <div class="hdr-cell">
+        <span id="con-datetime" style="font-family:'DSEG7Classic',monospace;font-size:4.5vh;color:#e0e0e0;"></span>
+    </div>
+</div>
+
+<table>
+<colgroup>
+    <col style="width:7%">
+    <col style="width:16%">
+    <col>
+    <col style="width:20%">
+    <col style="width:16%">
+</colgroup>
+<thead>
+<tr>
+    <th class="th-lane">Lane</th>
+    <th class="th-status">Status</th>
+    <th class="th-time">Time</th>
+    <th class="th-splits">Splits</th>
+    <th class="th-place">Position</th>
+</tr>
+</thead>
+<tbody id="tbody">
+{% for i in range(1, num_lanes + 1) %}
+<tr id="row{{ i }}" class="empty">
+    <td class="td-ch">{{ i }}</td>
+    <td class="td-status" id="status{{ i }}">—</td>
+    <td class="td-time"   id="time{{ i }}">—</td>
+    <td class="td-splits" id="splits{{ i }}">—</td>
+    <td class="td-place"  id="place{{ i }}">—</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+<script src="/static/js/socket.io.min.js"></script>
+<script>
+var NUM_LANES  = {{ num_lanes }};
+var clock      = '—';
+
+function tick_clock() {
+    var d = new Date();
+    document.getElementById('con-datetime').textContent =
+        ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+}
+tick_clock();
+setInterval(tick_clock, 1000);
+var running    = {};
+var times      = {};
+
+var sock = io('/scoreboard');
+
+sock.on('update_scoreboard', function(d) {
+    if ('running_time' in d) {
+        clock = d.running_time || '—';
+        for (var i = 1; i <= NUM_LANES; i++) {
+            if (running[i] && document.getElementById('time' + i))
+                document.getElementById('time' + i).textContent = clock;
+        }
+    }
+    if ('current_event' in d) document.getElementById('con-event').textContent = (d.current_event || '—').trim();
+    if ('current_heat'  in d) document.getElementById('con-heat').textContent  = (d.current_heat  || '—').trim();
+    if ('event_name'    in d) document.getElementById('con-name').textContent  = d.event_name || '';
+    if ('length_record'  in d) document.getElementById('con-length').textContent = d.length_record || '—';
+    if ('global_place'   in d) document.getElementById('con-place').textContent  = d.global_place  || '—';
+    if ('channel_22_time' in d && d.channel_22_time)
+        document.getElementById('con-time22').textContent = d.channel_22_time;
+
+    for (var i = 1; i <= NUM_LANES; i++) {
+        var row    = document.getElementById('row'    + i);
+        if (!row) continue;
+        var tdTime = document.getElementById('time'   + i);
+        var tdPl   = document.getElementById('place'  + i);
+        var tdSt   = document.getElementById('status' + i);
+
+        if ('lane_running' + i in d) running[i] = d['lane_running' + i];
+        if ('lane_time'    + i in d && d['lane_time' + i]) times[i] = d['lane_time' + i];
+
+        if ('lane_place' + i in d) {
+            var pl = d['lane_place' + i];
+            tdPl.textContent = (pl && pl.trim()) ? pl : '—';
+        }
+
+        if ('lane_splits' + i in d) {
+            var sp = d['lane_splits' + i];
+            var el = document.getElementById('splits' + i);
+            if (el) el.textContent = (sp != null && sp !== '') ? sp : '—';
+        }
+
+        var isRunning = running[i] || false;
+        var hasTime   = !!times[i];
+
+        if (isRunning) {
+            row.className      = 'running';
+            tdTime.textContent = clock;
+            tdSt.textContent   = 'Running';
+        } else if (hasTime) {
+            row.className      = 'stopped';
+            tdTime.textContent = times[i];
+            tdSt.textContent   = 'Stopped';
+        } else {
+            row.className      = 'empty';
+            tdTime.textContent = '—';
+            tdSt.textContent   = '—';
+        }
+    }
+});
+
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+# Replace with your actual domain name.
+# Caddy obtains and renews the Let's Encrypt certificate automatically.
+scores.example.com {
+    reverse_proxy app:5000
+}

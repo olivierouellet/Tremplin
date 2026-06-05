@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+"""Tremplin deploy webhook.
+
+Listens on 0.0.0.0 so Docker bridge networks can reach it.
+Authenticated endpoints:
+  POST /deploy   — git pull + docker compose up -d --build
+  GET  /versions — list available release tags
+  GET  /log      — stream output of the last deploy
+
+Setup:
+  1. Copy deploy_webhook.service to /etc/systemd/system/
+  2. Replace YOUR_INSTALL_DIR and YOUR_USER in the service file
+  3. sudo systemctl daemon-reload && sudo systemctl enable --now deploy-webhook
+"""
+import hmac
+import http.server
+import json
+import os
+import re
+import subprocess
+import threading
+from urllib.parse import urlparse, parse_qs
+
+_VERSION_RE = re.compile(r'^v\d{4}\.\d{2}\.\d+$')
+
+SECRET   = os.environ.get('DEPLOY_SECRET', '')
+REPO     = os.path.expanduser(os.environ.get('REPO_DIR', '~/Tremplin'))
+PORT     = int(os.environ.get('DEPLOY_PORT', '9000'))
+LOG_FILE = '/tmp/tremplin-deploy.log'
+
+
+def _run_deploy(cmd):
+    """Run the deploy command, stream output to LOG_FILE, self-restart when done."""
+    log = open(LOG_FILE, 'wb', buffering=0)
+    log.write(b'##START##\n')
+    proc = subprocess.Popen(
+        ['bash', '-c', cmd],
+        stdout=log, stderr=subprocess.STDOUT,
+        start_new_session=True,
+    )
+
+    def _wait():
+        proc.wait()
+        log.write(f'\n##DONE:{proc.returncode}##\n'.encode())
+        log.flush()
+        log.close()
+        # Restart the webhook so the new deploy_webhook.py takes effect
+        subprocess.Popen(['sudo', 'systemctl', 'restart', 'deploy-webhook'])
+
+    threading.Thread(target=_wait, daemon=True).start()
+
+
+class Handler(http.server.BaseHTTPRequestHandler):
+
+    def do_POST(self):
+        if self.path != '/deploy':
+            self._reply(404, b'not found')
+            return
+        if not self._check_auth():
+            return
+        length = int(self.headers.get('Content-Length', 0))
+        body = self.rfile.read(length) if length else b'{}'
+        try:
+            version = json.loads(body).get('version', 'latest')
+        except Exception:
+            version = 'latest'
+
+        self._reply(200, b'deploy started')
+
+        if version == 'master':
+            cmd = f'cd {REPO} && git checkout master && git pull'
+        else:
+            cmd = (
+                f'cd {REPO} && git fetch --tags && '
+                f'LATEST=$(git tag -l --sort=-version:refname | grep -E \'^v[0-9]{{4}}\\.[0-9]{{2}}\\.[0-9]+$\' | head -1) && '
+                f'if [ -n "$LATEST" ]; then git checkout -B release "$LATEST"; else git checkout master && git pull; fi'
+            )
+        cmd += f' && cd {REPO}/cloud && docker compose up -d --build'
+
+        _run_deploy(cmd)
+
+    def do_GET(self):
+        path = urlparse(self.path).path
+        if path == '/versions':
+            self._handle_versions()
+        elif path == '/log':
+            self._handle_log()
+        elif path == '/logs':
+            self._handle_logs()
+        else:
+            self._reply(404, b'not found')
+
+    def _handle_versions(self):
+        if not self._check_auth():
+            return
+        try:
+            cur = subprocess.run(
+                ['git', '-C', REPO, 'describe', '--tags', '--exact-match', 'HEAD'],
+                capture_output=True, text=True, timeout=8)
+            current = cur.stdout.strip() if cur.returncode == 0 else ''
+            subprocess.run(['git', '-C', REPO, 'fetch', '--tags'],
+                           capture_output=True, timeout=20)
+            tags_r = subprocess.run(
+                ['git', '-C', REPO, 'tag', '-l', '--sort=-version:refname'],
+                capture_output=True, text=True, timeout=8)
+            tags = [t.strip() for t in tags_r.stdout.splitlines()
+                    if t.strip() and _VERSION_RE.match(t.strip())]
+            body = json.dumps({'ok': True, 'current': current, 'versions': tags}).encode()
+            self._reply(200, body, 'application/json')
+        except Exception as e:
+            body = json.dumps({'ok': False, 'error': str(e)}).encode()
+            self._reply(500, body, 'application/json')
+
+    def _handle_log(self):
+        if not self._check_auth():
+            return
+        try:
+            with open(LOG_FILE, 'rb') as f:
+                content = f.read().decode('utf-8', errors='replace')
+        except FileNotFoundError:
+            content = ''
+
+        lines = []
+        done  = None
+        for line in content.splitlines():
+            if line == '##START##':
+                continue
+            m = re.match(r'^##DONE:(-?\d+)##$', line.strip())
+            if m:
+                done = (int(m.group(1)) == 0)
+            else:
+                lines.append(line)
+
+        body = json.dumps({'lines': lines, 'done': done}).encode()
+        self._reply(200, body, 'application/json')
+
+    def _handle_logs(self):
+        if not self._check_auth():
+            return
+        params = parse_qs(urlparse(self.path).query)
+        source = params.get('source', ['app'])[0]
+        tail   = str(min(int(params.get('tail', ['300'])[0]), 1000))
+        compose = f'{REPO}/cloud/docker-compose.yml'
+
+        cmds = {
+            'app':     ['docker', 'compose', '-f', compose, 'logs', '--tail', tail, '--no-color', 'app'],
+            'caddy':   ['docker', 'compose', '-f', compose, 'logs', '--tail', tail, '--no-color', 'caddy'],
+            'webhook': ['journalctl', '-u', 'deploy-webhook', '-n', tail, '--no-pager', '--output=short'],
+        }
+        if source not in cmds:
+            self._reply(400, b'unknown source')
+            return
+        try:
+            r = subprocess.run(cmds[source], capture_output=True, text=True, timeout=15)
+            output = r.stdout + (r.stderr if r.stderr and not r.stdout else '')
+            body = json.dumps({'ok': True, 'lines': output.splitlines()}).encode()
+            self._reply(200, body, 'application/json')
+        except Exception as e:
+            body = json.dumps({'ok': False, 'error': str(e)}).encode()
+            self._reply(500, body, 'application/json')
+
+    def _check_auth(self):
+        if not SECRET:
+            self._reply(500, b'DEPLOY_SECRET not set')
+            return False
+        token = self.headers.get('X-Deploy-Token', '')
+        if not hmac.compare_digest(token.encode(), SECRET.encode()):
+            self._reply(403, b'forbidden')
+            return False
+        return True
+
+    def _reply(self, code, body, content_type='text/plain'):
+        self.send_response(code)
+        self.send_header('Content-Type', content_type)
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, fmt, *args):
+        print(fmt % args, flush=True)
+
+
+if __name__ == '__main__':
+    if not SECRET:
+        print('WARNING: DEPLOY_SECRET not set — all requests will be rejected', flush=True)
+    server = http.server.HTTPServer(('0.0.0.0', PORT), Handler)
+    print(f'deploy webhook listening on 0.0.0.0:{PORT}  repo={REPO}', flush=True)
+    server.serve_forever()

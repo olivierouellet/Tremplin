@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operator</title>
+<style>
+@font-face {
+    font-family: 'Overpass Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/static/fonts/OverpassMono-Regular.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'DSEG7Classic';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/static/fonts/DSEG7Classic-Regular.woff2') format('woff2');
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+    background: #0a0a0a;
+    color: #d0d0d0;
+    font-family: 'Courier New', monospace;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Scoreboard-style header bar ── */
+#top-bar {
+    display: flex;
+    align-items: stretch;
+    flex-shrink: 0;
+    background: #1a1a1a;
+    border-bottom: 1px solid #2e2e2e;
+}
+.hdr-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.8vh 2vw;
+    border-left: 1px solid #2e2e2e;
+    white-space: nowrap;
+}
+.hdr-cell:first-child { border-left: none; }
+.hdr-cell-name { flex: 1; align-items: center; justify-content: center; }
+.hdr-label {
+    font-size: 1.8vh;
+    color: #ffffff;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.hdr-value {
+    font-size: 4vh;
+    color: #e0e0e0;
+}
+#op-event, #op-heat {
+    font-family: 'DSEG7Classic', monospace;
+    font-size: 4.5vh;
+    color: #ffffff;
+}
+#op-chrono, #op-wallclock {
+    font-family: 'DSEG7Classic', monospace;
+    font-size: 4.5vh;
+}
+#op-wallclock { color: #e0e0e0; }
+#op-name {
+    font-family: 'Overpass Mono', monospace;
+    font-size: 4vh;
+    color: #e0e0e0;
+}
+
+/* ── Table ── */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    flex: 1;
+    table-layout: fixed;
+}
+thead th {
+    padding: 5px 12px;
+    border-bottom: 1px solid #2a2a2a;
+    font-weight: normal;
+    white-space: nowrap;
+    overflow: hidden;
+    vertical-align: bottom;
+}
+th.th-lane, th.th-status, th.th-time, th.th-splits, th.th-place {
+    color: #555;
+    font-size: 3vh;
+}
+th.th-lane   { text-align: center; }
+th.th-status { text-align: center; }
+th.th-time   { text-align: center; }
+th.th-splits { text-align: center; }
+th.th-place  { text-align: right; }
+
+/* ── Data cells ── */
+td {
+    padding: 0.3vh 12px;
+    border-bottom: 1px solid #181818;
+    font-size: calc({{ (42 / num_lanes) | round(1) }}vh);
+    white-space: nowrap;
+    overflow: hidden;
+    vertical-align: middle;
+}
+tr.running td { color: #aaa; }
+tr.stopped td { color: #e0e0e0; }
+tr.stopped td.td-time  { color: #FFD700; }
+tr.stopped td.td-place { color: #fff; font-weight: bold; }
+tr.done td { color: #e0e0e0; }
+tr.done td.td-place { color: #fff; font-weight: bold; }
+tr.empty td { color: #333; }
+td.td-ch     { color: #444; text-align: center; }
+td.td-status { text-align: center; line-height: 1; white-space: nowrap; }
+td.td-status span { display: inline-block; transform: scale(2.0); margin: 0 0.4em; }
+.icon-play  { color: #333; }
+.icon-pause { color: #333; }
+tr.running .icon-play  { color: #4CAF50; }
+tr.stopped .icon-pause { color: #FFD700; }
+/* tr.done: heat finished, place assigned — both icons stay grey */
+td.td-time   { text-align: center; }
+td.td-splits { text-align: center; }
+td.td-place  { text-align: right; }
+.btn-split {
+    background: #222;
+    border: 1px solid #3a3a3a;
+    color: #888;
+    font-size: 0.8em;
+    padding: 0 0.5em;
+    cursor: pointer;
+    border-radius: 3px;
+    line-height: 1.4;
+}
+.btn-split:hover { background: #333; color: #ccc; }
+.split-val { display: inline-block; min-width: 2.5em; text-align: center; }
+#overlay-toggle, #cols-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 0.6em;
+    line-height: 1;
+    color: #444;
+    font-size: 5vh;
+    display: flex;
+    align-items: center;
+}
+#overlay-toggle.active { color: #e02020; }
+#cols-toggle.cols-off  { color: #FFD700; }
+</style>
+</head>
+<body>
+
+<div id="top-bar">
+    <div class="hdr-cell">
+        <span class="hdr-label">Event</span>
+        <span id="op-event">—</span>
+    </div>
+    <div class="hdr-cell">
+        <span class="hdr-label">Heat</span>
+        <span id="op-heat">—</span>
+    </div>
+    <div class="hdr-cell hdr-cell-name">
+        <span id="op-name"></span>
+    </div>
+    <button id="overlay-toggle" title="Toggle carousel overlay" onclick="toggleOverlay()">&#9641;</button>
+    <button id="cols-toggle" title="Toggle time/delta/position columns" onclick="toggleColumns()">&#9637;</button>
+    <div class="hdr-cell" id="op-chrono-cell" style="display:none;">
+        <span id="op-chrono" style="color:#FFD700;"></span>
+    </div>
+    <div class="hdr-cell">
+        <span id="op-wallclock">—</span>
+    </div>
+</div>
+
+<table>
+<colgroup>
+    <col style="width:7%">
+    <col style="width:20%">
+    <col style="width:28%">
+    <col style="width:25%">
+    <col style="width:20%">
+</colgroup>
+<thead>
+<tr>
+    <th class="th-lane">Lane</th>
+    <th class="th-status">Status</th>
+    <th class="th-time">Time</th>
+    <th class="th-splits">Splits</th>
+    <th class="th-place">Position</th>
+</tr>
+</thead>
+<tbody id="tbody">
+{% for i in range(1, num_lanes + 1) %}
+<tr id="row{{ i }}" class="empty">
+    <td class="td-ch">{{ i }}</td>
+    <td class="td-status" id="status{{ i }}">—</td>
+    <td class="td-time"   id="time{{ i }}">—</td>
+    <td class="td-splits">
+        <button class="btn-split" onclick="adjustSplits({{ i }}, -1)">&#9664;</button>
+        <span class="split-val" id="splits{{ i }}">—</span>
+        <button class="btn-split" onclick="adjustSplits({{ i }}, +1)">&#9654;</button>
+    </td>
+    <td class="td-place"  id="place{{ i }}">—</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+<script src="/static/js/socket.io.min.js"></script>
+<script>
+var NUM_LANES      = {{ num_lanes }};
+var SPLIT_STEP     = {{ split_step }};
+var clock          = '—';
+var running        = {};
+var times          = {};
+var places         = {};
+var expectedSplits = 0;
+var race_active    = false;
+
+var _chrono_base  = null;
+var _chrono_at    = null;
+var _chrono_timer = null;
+
+function parseHundredths(str) {
+    var m = str.match(/^(?:(\d+):)?(\d{1,2})\.(\d{2})$/);
+    if (!m) return null;
+    return parseInt(m[1] || 0) * 6000 + parseInt(m[2]) * 100 + parseInt(m[3]);
+}
+function formatHundredths(h) {
+    var hh = h % 100, ss = Math.floor(h / 100) % 60, mm = Math.floor(h / 6000);
+    var frac = '.' + (hh < 10 ? '0' : '') + hh;
+    return mm > 0 ? mm + ':' + (ss < 10 ? '0' : '') + ss + frac : ss + frac;
+}
+function start_chrono() {
+    document.getElementById('op-chrono-cell').style.display = '';
+    if (_chrono_timer) return;
+    _chrono_timer = setInterval(function() {
+        if (_chrono_base === null) return;
+        var elapsed = Math.floor((Date.now() - _chrono_at) / 10);
+        document.getElementById('op-chrono').textContent = formatHundredths(_chrono_base + elapsed);
+    }, 50);
+}
+function stop_chrono() {
+    if (_chrono_timer) { clearInterval(_chrono_timer); _chrono_timer = null; }
+    _chrono_base = null;
+    document.getElementById('op-chrono-cell').style.display = 'none';
+}
+
+function updateWallClock() {
+    var d = new Date();
+    var h = ('0' + d.getHours()).slice(-2);
+    var m = ('0' + d.getMinutes()).slice(-2);
+    var s = ('0' + d.getSeconds()).slice(-2);
+    document.getElementById('op-wallclock').textContent = h + ':' + m + ':' + s;
+}
+updateWallClock();
+setInterval(updateWallClock, 1000);
+
+var sock = io('/scoreboard');
+
+sock.on('update_scoreboard', function(d) {
+    if ('running_time' in d) {
+        clock = d.running_time || '—';
+        var h = parseHundredths(clock);
+        if (h !== null) { _chrono_base = h; _chrono_at = Date.now(); }
+        for (var i = 1; i <= NUM_LANES; i++) {
+            if (running[i] && document.getElementById('time' + i))
+                document.getElementById('time' + i).textContent = clock;
+        }
+    }
+    if ('expected_splits' in d) expectedSplits = d.expected_splits || 0;
+    if ('current_event' in d) document.getElementById('op-event').textContent = (d.current_event || '—').trim();
+    if ('current_heat'  in d) document.getElementById('op-heat').textContent  = (d.current_heat  || '—').trim();
+    if ('event_name'    in d) document.getElementById('op-name').textContent  = d.event_name || '';
+
+    for (var i = 1; i <= NUM_LANES; i++) {
+        var row    = document.getElementById('row'    + i);
+        if (!row) continue;
+        var tdTime = document.getElementById('time'   + i);
+        var tdPl   = document.getElementById('place'  + i);
+        var tdSt   = document.getElementById('status' + i);
+
+        if ('lane_running' + i in d) running[i] = d['lane_running' + i];
+        if ('lane_time'    + i in d && d['lane_time' + i]) times[i] = d['lane_time' + i];
+
+        if ('lane_place' + i in d) {
+            var pl = d['lane_place' + i];
+            places[i] = (pl || '').trim();
+            tdPl.textContent = places[i] || '—';
+        }
+        if ('lane_splits' + i in d) {
+            var sp  = d['lane_splits' + i];
+            var exp = expectedSplits;
+            var txt = (sp > 0) ? String(sp) : '—';
+            if (exp > 0) txt += ' / ' + exp;
+            var el = document.getElementById('splits' + i);
+            if (el) el.textContent = txt;
+        }
+
+        var isRunning = running[i] || false;
+        var hasTime   = !!times[i];
+
+        var icons = '<span class="icon-play">▶</span><span class="icon-pause">⏸</span>';
+        var hasPlace = !!(places[i]);
+        if (isRunning) {
+            row.className      = 'running';
+            tdTime.textContent = clock;
+            tdSt.innerHTML     = icons;
+        } else if (hasTime && hasPlace) {
+            row.className      = 'done';
+            tdTime.textContent = times[i];
+            tdSt.innerHTML     = icons;
+        } else if (hasTime) {
+            row.className      = 'stopped';
+            tdTime.textContent = times[i];
+            tdSt.innerHTML     = icons;
+        } else {
+            row.className      = 'empty';
+            tdTime.textContent = '—';
+            tdSt.innerHTML     = icons;
+        }
+    }
+
+    race_active = false;
+    for (var i = 1; i <= NUM_LANES; i++) {
+        if (running[i] || (times[i] && !places[i])) { race_active = true; break; }
+    }
+    if (race_active) start_chrono(); else stop_chrono();
+});
+
+function adjustSplits(lane, dir) {
+    var delta = dir * SPLIT_STEP;
+    sock.emit('adjust_splits', {lane: lane, delta: delta});
+}
+
+var _overlay_active = false;
+
+function toggleOverlay() {
+    _overlay_active = !_overlay_active;
+    sock.emit('set_overlay', {active: _overlay_active});
+}
+
+sock.on('display_overlay', function(d) {
+    _overlay_active = d.active;
+    var btn = document.getElementById('overlay-toggle');
+    if (_overlay_active) btn.classList.add('active');
+    else                 btn.classList.remove('active');
+});
+
+var _cols_hidden = false;
+
+function toggleColumns() {
+    if (_cols_hidden) {
+        _cols_hidden = false;
+    } else {
+        if (race_active) return;
+        _cols_hidden = true;
+    }
+    sock.emit('set_columns', {hidden: _cols_hidden});
+}
+
+sock.on('columns_state', function(d) {
+    _cols_hidden = d.hidden;
+    var btn = document.getElementById('cols-toggle');
+    if (_cols_hidden) btn.classList.add('cols-off');
+    else              btn.classList.remove('cols-off');
+});
+</script>
+</body>
+</html>

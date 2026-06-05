@@ -1,0 +1,45 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Runtime data
+settings.json
+*.log
+
+# Downloaded assets (fetched by install.sh)
+static/js/xterm.min.js
+static/css/xterm.min.css
+
+# Meet data (kept locally, not in repo)
+~/meet/
+/BG
+
+# Private documents (legal analysis, not for public repo)
+info/copyright_status.md
