@@ -25,6 +25,7 @@ sock.on('reload',   function() { location.reload(); });
 sock.on('results_snapshot', function(d) { renderResults(d); });
 
 function renderResults(d) {
+    on_timer();
     document.getElementById('current_event').innerHTML = escHtml(d.event || '');
     document.getElementById('current_heat').innerHTML  = escHtml(d.heat  || '');
     document.getElementById('event_name').innerHTML    = escHtml(d.event_name || '');
