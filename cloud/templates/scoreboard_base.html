@@ -73,7 +73,7 @@
     .timing-table tbody td:nth-child(5) { font-size: 0.60em; }
 }
 @media (orientation: landscape) {
-    .timing-row-odd, .timing-row-even { font-size: min({{ (42 / num_lanes) | round(1) }}vh, {{ (42 / num_lanes * 6) | round(0) | int }}px); }
+    .timing-row-odd, .timing-row-even { font-size: min({{ (42 / num_lanes) | round(1) }}vh, 32px); }
     .td_time  { font-size: 0.72em; padding: 0 0.8vw; }
     .td_delta { font-size: 0.58em; padding: 0 0.8vw; }
     [id^="lane_club"] { font-size: 0.68em; }

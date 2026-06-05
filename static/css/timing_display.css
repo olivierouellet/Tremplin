@@ -142,6 +142,7 @@ html, body {
 
 .header_label {
     font-size: min(1.8vh, 13px);
+    line-height: 1;
     color: var(--color-header-label);
     letter-spacing: 0.08em;
 }
@@ -155,6 +156,7 @@ html, body {
 #current_event, #current_heat {
     font-family: var(--font-digits), monospace;
     font-size: min(4.5vh, 30px);
+    line-height: 1;
     color: var(--color-header-label);
 }
 
