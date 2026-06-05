@@ -55,4 +55,8 @@ function renderResults(d) {
     }
     document.getElementById('waiting').classList.add('hidden');
 }
+window.on_tab_shown = function() {
+    if (sock.connected) { sock.emit('join_meet', { meet_id: MEET_ID }); }
+    else                 { sock.connect(); }
+};
 {% endblock %}
