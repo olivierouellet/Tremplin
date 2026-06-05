@@ -68,12 +68,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self._reply(200, b'deploy started')
 
         if version == 'master':
-            cmd = f'cd {REPO} && git checkout master && git pull'
+            cmd = f'cd {REPO} && git fetch origin && git reset --hard origin/master'
         else:
             cmd = (
                 f'cd {REPO} && git fetch --tags && '
                 f'LATEST=$(git tag -l --sort=-version:refname | grep -E \'^v[0-9]{{4}}\\.[0-9]{{2}}\\.[0-9]+$\' | head -1) && '
-                f'if [ -n "$LATEST" ]; then git checkout -B release "$LATEST"; else git checkout master && git pull; fi'
+                f'if [ -n "$LATEST" ]; then git checkout -B release "$LATEST"; else git fetch origin && git reset --hard origin/master; fi'
             )
         cmd += f' && cd {REPO}/cloud && docker compose up -d --build'
 
