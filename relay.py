@@ -88,20 +88,28 @@ def update_metadata():
             pass
 
 
-def send_schedule():
-    """Send the current schedule snapshot to the cloud. Call after a meet file is loaded."""
+def send_schedule(client=None):
+    """Send the current schedule snapshot to the cloud. Call after a meet file is loaded.
+
+    Pass `client` directly when calling from inside a connect handler, because
+    _client is not yet assigned at that point and relay_emit would silently drop.
+    """
     from meet_data import _build_meet_data
     if not (state.lenex_start_list or state.event_info.events):
         return
     try:
         md = _build_meet_data()
-        relay_emit('schedule_snapshot', {
+        data = {
             'events': [[ev, sorted(heats)] for ev, heats in md['events_grouped']],
             'names':  {str(k): v for k, v in md['event_names'].items()},
             'times':  {str(k): {str(h): t for h, t in v.items()}
                        for k, v in md['heat_times'].items()},
             'start_list': _serialise_start_list(md['start_list']),
-        })
+        }
+        if client is not None:
+            client.emit('schedule_snapshot', data, namespace='/relay')
+        else:
+            relay_emit('schedule_snapshot', data)
     except Exception:
         pass
 
@@ -144,7 +152,12 @@ def _run():
             c.emit('register', meta, namespace='/relay')
             with _lock:
                 _connected = True
-            send_schedule()
+            send_schedule(client=c)
+            if state._last_results_snapshot:
+                try:
+                    c.emit('results_snapshot', state._last_results_snapshot, namespace='/relay')
+                except Exception:
+                    pass
             print('[relay] connected to cloud', flush=True)
 
         @c.event(namespace='/relay')
