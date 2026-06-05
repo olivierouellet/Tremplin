@@ -26,9 +26,32 @@
         .card-meta { font-size: 0.88em; color: #666; line-height: 1.6; }
         .card-meta span + span::before { content: ' · '; }
         .empty { color: #444; font-size: 1.1em; margin-top: 60px; }
+
+        /* ── Pull-to-refresh ── */
+        #ptr-edge {
+            position: fixed; top: 0; left: 0; right: 0;
+            height: calc(40px + env(safe-area-inset-top));
+            z-index: 10;
+        }
+        #ptr-wrap {
+            position: fixed; top: env(safe-area-inset-top); left: 0; right: 0;
+            height: 0; overflow: visible; z-index: 11; pointer-events: none;
+        }
+        #ptr-indicator {
+            position: absolute; top: -44px; left: 50%;
+            transform: translateX(-50%);
+            width: 36px; height: 36px; border-radius: 50%;
+            background: rgba(255,255,255,0.12);
+            border: 1.5px solid rgba(255,255,255,0.3);
+            display: flex; align-items: center; justify-content: center;
+            color: rgba(255,255,255,0.75); font-size: 20px; line-height: 1;
+            opacity: 0;
+        }
     </style>
 </head>
 <body>
+    <div id="ptr-edge"></div>
+    <div id="ptr-wrap"><div id="ptr-indicator">↻</div></div>
     <h1>{{ t.page_title }}</h1>
     {% if meets %}
     <div class="meets">
@@ -45,5 +68,44 @@
     {% else %}
     <div class="empty">{{ t.no_meets }}</div>
     {% endif %}
+    <script>
+        const ptr     = document.getElementById('ptr-indicator');
+        const PTR_DIST = 80;
+        let ptrY = null;
+
+        function ptrReset(animate) {
+            if (animate) {
+                ptr.style.transition = 'top 0.25s, opacity 0.25s';
+                setTimeout(() => { ptr.style.transition = ''; }, 250);
+            }
+            ptr.style.top        = '-44px';
+            ptr.style.opacity    = '0';
+            ptr.style.transform  = 'translateX(-50%) rotate(0deg)';
+            ptr.style.background = 'rgba(255,255,255,0.12)';
+        }
+
+        document.getElementById('ptr-edge').addEventListener('touchstart', e => {
+            if (window.scrollY === 0) ptrY = e.touches[0].clientY;
+        }, { passive: true });
+
+        document.addEventListener('touchmove', e => {
+            if (ptrY === null) return;
+            const dy = e.touches[0].clientY - ptrY;
+            if (dy < 0) { ptrY = null; ptrReset(false); return; }
+            const progress = Math.min(dy / PTR_DIST, 1);
+            ptr.style.top        = Math.min(dy * 0.65 - 44, 8) + 'px';
+            ptr.style.opacity    = Math.min(progress * 1.5, 1);
+            ptr.style.transform  = `translateX(-50%) rotate(${progress * 270}deg)`;
+            ptr.style.background = progress >= 1 ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.12)';
+        }, { passive: true });
+
+        document.addEventListener('touchend', e => {
+            if (ptrY === null) return;
+            const dy = e.changedTouches[0].clientY - ptrY;
+            ptrY = null;
+            if (dy >= PTR_DIST) { location.reload(); }
+            else                { ptrReset(true); }
+        }, { passive: true });
+    </script>
 </body>
 </html>

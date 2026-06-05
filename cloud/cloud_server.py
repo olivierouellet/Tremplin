@@ -156,8 +156,6 @@ def route_index():
         meets = [{'id': mid, 'name': m['name'], 'location': m['location'],
                   'sport': m['sport'], 'organizer': m['organizer']}
                  for mid, m in _meets.items()]
-    if len(meets) == 1:
-        return flask.redirect(flask.url_for('route_mobile', meet=meets[0]['id']))
     return flask.render_template('picker.html', meets=meets, t=_load_cloud_strings())
 
 
