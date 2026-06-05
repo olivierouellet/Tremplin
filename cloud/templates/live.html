@@ -58,12 +58,6 @@ socket.on('connect', function() {
     reset_state();
     socket.emit('join_meet', { meet_id: MEET_ID });
 });
-window.on_tab_shown = function() {
-    reset_state();
-    mode_to_intro();
-    if (socket.connected) { socket.emit('join_meet', { meet_id: MEET_ID }); }
-    else                   { socket.connect(); }
-};
 socket.on('reload', function() { location.reload(); });
 socket.on('update_scoreboard', function(new_s) {
     for (var k in new_s) { s[k] = new_s[k]; }
