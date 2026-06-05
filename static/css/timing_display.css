@@ -118,6 +118,10 @@ html, body {
 
 .header_cell:first-child { border-left: none; }
 
+/* Event and heat cells: label always at the top whether or not a digit is present */
+#header_event_cell,
+#header_heat_cell { justify-content: flex-start; }
+
 /* meet-title and event-name cells expand to fill remaining space */
 .header_cell_grow { flex: 1; align-items: flex-start; }
 .header_cell_name { flex: 1; min-width: 0; background-color: var(--color-header-bg); align-items: center; overflow: hidden; }
