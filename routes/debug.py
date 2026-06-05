@@ -70,9 +70,7 @@ def route_test_play():
                     state.lenex_meet_info.clear()
                     state.lenex_event_distances.clear()
                     state._test_meet_active = False
-                real_files = glob.glob(os.path.join(state.MEET_FOLDER, '*.lxf')) + \
-                             glob.glob(os.path.join(state.MEET_FOLDER, '*.csv'))
-                if not real_files:
+                if not state._active_meet_file:
                     try:
                         dest = os.path.join(state.MEET_FOLDER, os.path.basename(companion))
                         shutil.copy2(companion, dest)
