@@ -208,10 +208,21 @@
             current = idx;
             frames[current].classList.add('active');
             tabs[current].classList.add('active');
+            sessionStorage.setItem('tab', idx);
             try { frames[current].contentWindow.dispatchEvent(new Event('resize')); } catch(e) {}
             try { frames[current].contentWindow.on_timer(); } catch(e) {}
             try { frames[current].contentWindow.on_tab_shown(); } catch(e) {}
         }
+        (function() {
+            const saved = parseInt(sessionStorage.getItem('tab'), 10);
+            if (saved > 0 && saved <= 2) {
+                frames[0].classList.remove('active');
+                tabs[0].classList.remove('active');
+                current = saved;
+                frames[saved].classList.add('active');
+                tabs[saved].classList.add('active');
+            }
+        })();
         let swipeStartX = null;
         function onTouchStart(e) { swipeStartX = e.touches[0].clientX; }
         function onTouchEnd(e) {
