@@ -83,6 +83,16 @@
     .time-column  { width: 17vw; max-width: 17vw; }
     .delta-column { width: 14vw; max-width: 14vw; }
 }
+/* Phone landscape: vh is ~375px so vh-based header fonts become tiny.
+   Switch to vw-based sizing for screens shorter than 500px. Desktop/TV
+   (height ≥ 768px) are unaffected and keep the original vh values. */
+@media (orientation: landscape) and (max-height: 500px) {
+    .header_label                  { font-size: 1.5vw; }
+    .header_value                  { font-size: 3.2vw; }
+    #current_event, #current_heat  { font-size: 3.5vw; }
+    #meet_datetime                 { font-size: 3.5vw !important; }
+    .timing-header-bar             { height: max(65px, 7vw); }
+}
 {% block extra_style %}{% endblock %}
 </style>
 <script>
