@@ -26,16 +26,13 @@ sock.on('results_snapshot', function(d) { renderResults(d); });
 
 function renderResults(d) {
     on_timer();
-    var lanes = (d && d.lanes) ? d.lanes : [];
-    if (!lanes.length) return;
-
     document.getElementById('current_event').innerHTML = escHtml(d.event || '');
     document.getElementById('current_heat').innerHTML  = escHtml(d.heat  || '');
     document.getElementById('event_name').innerHTML    = escHtml(d.event_name || '');
 
     reset_times();
     for (var i = 1; i <= NUM_LANES; i++) {
-        var r = lanes[i - 1];
+        var r = d.lanes[i - 1];
         if (r) {
             document.getElementById('lane_num'     + i).textContent = r.channel || i;
             document.getElementById('lane_name'    + i).innerHTML   = escHtml(r.name || '');
@@ -58,12 +55,4 @@ function renderResults(d) {
     }
     document.getElementById('waiting').classList.add('hidden');
 }
-
-window.on_tab_shown = function() {
-    if (sock.connected) {
-        sock.emit('join_meet', { meet_id: MEET_ID });
-    } else {
-        sock.connect();
-    }
-};
 {% endblock %}

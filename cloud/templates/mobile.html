@@ -211,7 +211,6 @@
             sessionStorage.setItem('tab', idx);
             try { frames[current].contentWindow.dispatchEvent(new Event('resize')); } catch(e) {}
             try { frames[current].contentWindow.on_timer(); } catch(e) {}
-            try { frames[current].contentWindow.on_tab_shown(); } catch(e) {}
         }
         (function() {
             const saved = parseInt(sessionStorage.getItem('tab'), 10);
