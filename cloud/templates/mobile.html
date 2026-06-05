@@ -210,6 +210,7 @@
             tabs[current].classList.add('active');
             try { frames[current].contentWindow.dispatchEvent(new Event('resize')); } catch(e) {}
             try { frames[current].contentWindow.on_timer(); } catch(e) {}
+            try { frames[current].contentWindow.on_tab_shown(); } catch(e) {}
         }
         let swipeStartX = null;
         function onTouchStart(e) { swipeStartX = e.touches[0].clientX; }
