@@ -25,13 +25,13 @@ curl -fsSL https://raw.githubusercontent.com/olivierouellet/Tremplin/master/inst
 
 The script:
 - Installs Python dependencies via `uv`
-- Creates the `scoreboard` systemd service (starts on boot)
+- Creates the `tremplin` systemd service (starts on boot)
 - Adds the user to the `dialout` group for serial port access
-- Creates `~/Scoreboard/` with `meet/`, `images/`, and `recorded/` subdirectories
-- Copies `settings.default.json` to `~/Scoreboard/settings.json`
+- Creates `~/TremplinData/` with `meet/`, `images/`, `icons/`, and `recorded/` subdirectories
+- Copies `settings.default.json` to `~/TremplinData/settings.json`
 - Downloads socket.io and xterm.js
 - Sets the static IP to `10.10.10.10/24` (asks for confirmation — this will drop your SSH session if connected over Ethernet)
-- Sets the hostname to `scoreboard` (accessible as `scoreboard.local` on the network)
+- Sets the hostname to `tremplin` (accessible as `tremplin.local` on the network)
 
 ---
 
@@ -45,7 +45,7 @@ SSH in and run:
 curl -fsSL https://raw.githubusercontent.com/olivierouellet/Tremplin/master/install.sh -o install.sh && bash install.sh kiosk
 ```
 
-The script configures Chromium to open fullscreen on boot pointing at `http://scoreboard.local`.
+The script configures Chromium to open fullscreen on boot pointing at `http://tremplin.local`.
 
 > Pi #1 must be running and reachable before the kiosk boots.
 
@@ -62,10 +62,10 @@ See [cloud.md](cloud.md) for deploying the optional public relay server.
 The service starts automatically on boot. Manual control on Pi #1:
 
 ```bash
-sudo systemctl start   scoreboard
-sudo systemctl stop    scoreboard
-sudo systemctl restart scoreboard
-journalctl -u scoreboard -f        # live logs
+sudo systemctl start   tremplin
+sudo systemctl stop    tremplin
+sudo systemctl restart tremplin
+journalctl -u tremplin -f          # live logs
 ```
 
 ---
@@ -80,7 +80,7 @@ To update manually over SSH:
 cd ~/Tremplin
 git pull
 uv sync
-sudo systemctl restart scoreboard
+sudo systemctl restart tremplin
 ```
 
 Pi #2 only needs updating if the scoreboard template changed — a reboot is enough since Chromium reloads from Pi #1 on startup.

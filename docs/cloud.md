@@ -39,7 +39,7 @@ The script handles everything interactively:
 - Prompts for admin username and password
 - Prompts for your domain name and updates `Caddyfile`
 - Generates a `DEPLOY_SECRET` and installs the deploy webhook as a systemd service
-- Configures `ufw` (ports 22, 80, 443)
+- Configures `ufw` (ports 22, 80, 443 TCP + 443 UDP for HTTP/3)
 - Builds and starts the compose stack (app + Caddy)
 
 When it finishes, open `https://yourdomain/admin` and add organizers.

@@ -4,7 +4,7 @@
 
 | | |
 | --- | --- |
-| URL | `http://scoreboard.local/settings` |
+| URL | `http://tremplin.local/settings` |
 | Username | `score` |
 | Password | `swimming` |
 
@@ -33,7 +33,7 @@ Append `?test` to any scoreboard URL to show mode control buttons (Splash, Intro
 ## Meet-day workflow
 
 1. In Splash Meet Manager: **File → Export → Lenex** → save as `.lxf`
-2. Copy the `.lxf` file to Pi #1 at `~/Scoreboard/meet/`  
+2. Copy the `.lxf` file to Pi #1 at `~/TremplinData/meet/`  
    (or upload it via **Settings → Meet Setup → Choose file**)
 3. Click **Reload Names** — swimmer names and clubs are now live on the scoreboard
 
@@ -52,7 +52,7 @@ Append `?test` to any scoreboard URL to show mode control buttons (Splash, Intro
 | **Network** | WiFi management; view connected scoreboard clients |
 | **Update & Backup** | Pull latest version from GitHub, sync dependencies, restart; download or restore a backup of `~/Scoreboard` |
 | **Test** | Play back pre-recorded sessions; adjust playback speed; record live serial sessions |
-| **Terminal** | In-browser terminal (runs `sudo raspi-config`) |
+| **Terminal** | In-browser terminal — Shell, raspi-config, Scoreboard logs, dmesg, serial ports |
 | **Cloud** | Cloud relay URL, relay key, location and sport for the meet picker |
 | **Account** | Change the admin UI username and password |
 
@@ -62,13 +62,13 @@ Append `?test` to any scoreboard URL to show mode control buttons (Splash, Intro
 
 | Path | Contents |
 | --- | --- |
-| `~/Scoreboard/meet/` | Lenex `.lxf` and Hytek `.csv` files — copy here on meet day |
-| `~/Scoreboard/images/` | Sponsor or club logo images for the splash screen |
-| `~/Scoreboard/recorded/` | Custom recorded sessions for playback in the Test tab |
-| `~/Scoreboard/locale/` | Custom locale `.toml` overrides (takes priority over built-in locales) |
-| `~/Scoreboard/themes/` | Custom theme `.toml` files |
-| `~/Scoreboard/console_decoders/` | Local-only decoder plugins (`.py` files) — loaded at startup, not tracked by git |
-| `~/Scoreboard/settings.json` | All admin UI settings |
+| `~/TremplinData/meet/` | Lenex `.lxf` and Hytek `.csv` files — copy here on meet day |
+| `~/TremplinData/images/` | Sponsor or club logo images for the splash screen |
+| `~/TremplinData/recorded/` | Custom recorded sessions for playback in the Test tab |
+| `~/TremplinData/locale/` | Custom locale `.toml` overrides (takes priority over built-in locales) |
+| `~/TremplinData/themes/` | Custom theme `.toml` files |
+| `~/TremplinData/console_decoders/` | Local-only decoder plugins (`.py` files) — loaded at startup, not tracked by git |
+| `~/TremplinData/settings.json` | All admin UI settings |
 
 ---
 
@@ -97,4 +97,4 @@ time  = { short = "TIME", long = "TIME"  }
 name  = { short = "NAME", long = "NAME"  }
 ```
 
-Add any `.toml` with the same structure to `locales/` (or upload via the Display tab) and it appears in the Language dropdown automatically. Files placed in `~/Scoreboard/locale/` take priority over the built-in ones.
+Add any `.toml` with the same structure to `locales/` (or upload via the Display tab) and it appears in the Language dropdown automatically. Files placed in `~/TremplinData/locale/` take priority over the built-in ones.
