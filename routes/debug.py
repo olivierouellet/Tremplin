@@ -22,7 +22,7 @@ bp = Blueprint('debug', __name__)
 _TERMINAL_ALLOWED_CMDS = {
     'bash':         ['bash'],
     'raspi-config': ['sudo', 'raspi-config'],
-    'logs':         ['journalctl', '-u', 'scoreboard', '-f'],
+    'logs':         ['journalctl', '-u', 'tremplin', '-f'],
     'dmesg-tty':    ['bash', '-c', 'dmesg | grep -i tty'],
     'serial-ports': ['python3', '-m', 'serial.tools.list_ports', '-v'],
 }
