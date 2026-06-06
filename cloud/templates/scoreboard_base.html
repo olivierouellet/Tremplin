@@ -148,7 +148,7 @@ function init() {
                 <tr class="timing-header">
                     <th class="lane-column" style="text-align:center;">{{ labels.lane or 'Lane' }}</th>
                     <th id="name-column" style="text-align:left;">{{ labels.name or 'Name' }}</th>
-                    <th class="club-column" style="text-align:left;">{{ labels.club or 'Club' }}</th>
+                    <th class="club-column" style="text-align:center;">{{ labels.club or 'Club' }}</th>
                     <th id="time-column" class="time-column" style="text-align:center;">{{ labels.time or 'Time' }}</th>
                     <th id="delta-column" class="delta-column" style="text-align:center;">{{ labels.delta or 'Δ' }}</th>
                     <th id="place-column" class="place-column" style="text-align:center;">{{ labels.place or '#' }}</th>
@@ -159,9 +159,9 @@ function init() {
                 <tr id="row{{ i }}" class="{{ 'timing-row-odd' if i % 2 == 1 else 'timing-row-even' }}">
                     <td id="lane_num{{ i }}" style="text-align:center;">{{ i }}</td>
                     <td class="lane-name-cell"><span id="lane_name{{ i }}"></span><span id="lane_name_alt{{ i }}" class="name-sub"></span></td>
-                    <td id="lane_club{{ i }}" style="text-align:left;"></td>
+                    <td id="lane_club{{ i }}" style="text-align:center;"></td>
                     <td class="td_time" style="text-align:center;"><span id="lane_time{{ i }}"></span></td>
-                    <td class="td_delta" id="lane_delta{{ i }}" style="text-align:right;"></td>
+                    <td class="td_delta" id="lane_delta{{ i }}" style="text-align:center;"></td>
                     <td id="lane_place{{ i }}" style="text-align:center;"></td>
                 </tr>
                 {% endfor %}

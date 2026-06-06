@@ -118,9 +118,8 @@ html, body {
 
 .header_cell:first-child { border-left: none; }
 
-/* Event and heat cells: label always at the top whether or not a digit is present */
 #header_event_cell,
-#header_heat_cell { justify-content: flex-start; }
+#header_heat_cell { justify-content: center; }
 
 /* meet-title and event-name cells expand to fill remaining space */
 .header_cell_grow { flex: 1; align-items: flex-start; }
