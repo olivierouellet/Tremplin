@@ -188,6 +188,7 @@ class CTSGen6Decoder(ConsoleDecoder):
 
             # ── Ch 11 — Length / record ───────────────────────────────────────
             elif channel == 11:
+                self._rec_buf = [0] * 8
                 for byte in data:
                     self._rec_buf[(byte >> 4) & 0x0F] = byte
                 updates['length_record'] = ''.join(
@@ -196,13 +197,21 @@ class CTSGen6Decoder(ConsoleDecoder):
 
             # ── Ch 12 — Event / heat ──────────────────────────────────────────
             elif channel == 12:
+                # Reset before each packet: the console omits blank slots, so
+                # accumulating across packets would leave stale digits when the
+                # event number shrinks (e.g. event 31 → event 1 never blanks slot 1).
+                self._eh_buf = [' '] * 8
                 for byte in data:
                     self._eh_buf[(byte >> 4) & 0x0F] = _digit(byte)
 
                 event_str = ''.join(self._eh_buf[:3])
                 heat_str  = ''.join(self._eh_buf[-3:])
-                updates['current_event'] = event_str
-                updates['current_heat']  = heat_str
+                # Only emit non-blank values: split packets (e.g. event-only or
+                # heat-only) should not overwrite the other field in the browser.
+                if event_str.strip():
+                    updates['current_event'] = event_str
+                if heat_str.strip():
+                    updates['current_heat']  = heat_str
 
                 try:
                     ev_heat = (int(event_str), int(heat_str))
@@ -217,6 +226,7 @@ class CTSGen6Decoder(ConsoleDecoder):
 
             # ── Ch 14 — Global place ──────────────────────────────────────────
             elif channel == 14:
+                self._place_buf = [0] * 8
                 for byte in data:
                     self._place_buf[(byte >> 4) & 0x0F] = byte
                 updates['global_place'] = ''.join(
