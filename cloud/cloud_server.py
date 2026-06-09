@@ -133,10 +133,12 @@ def _save_creds(creds):
 def _picker_appearance():
     creds = _load_creds()
     raw = creds.get('picker_title')
+    raw_wt = creds.get('picker_window_title')
     return {
-        'picker_title_form': 'Tremplin' if raw is None else raw,
-        'has_picker_logo':   bool(creds.get('picker_logo_b64', '')),
-        'picker_logo_above': creds.get('picker_logo_above', False),
+        'picker_title_form':        'Tremplin' if raw is None else raw,
+        'picker_window_title_form': 'Tremplin' if raw_wt is None else raw_wt,
+        'has_picker_logo':          bool(creds.get('picker_logo_b64', '')),
+        'picker_logo_above':        creds.get('picker_logo_above', False),
     }
 
 
@@ -169,8 +171,10 @@ def route_index():
                  for mid, m in _meets.items()]
     creds     = _load_creds()
     raw_title = creds.get('picker_title')
+    raw_wt    = creds.get('picker_window_title')
     return flask.render_template('picker.html', meets=meets, t=_load_cloud_strings(),
         picker_title=('Tremplin' if raw_title is None else raw_title),
+        picker_window_title=('Tremplin' if raw_wt is None else raw_wt),
         picker_logo=bool(creds.get('picker_logo_b64', '')),
         picker_logo_above=creds.get('picker_logo_above', False))
 
@@ -187,6 +191,7 @@ def route_mobile():
                                  name=meet['name'],
                                  location=meet['location'],
                                  sport=meet['sport'],
+                                 app_window_title=meet.get('app_window_title', ''),
                                  t=_strings(_meet_lang(meet), 'mobile'))
 
 
@@ -420,8 +425,9 @@ def route_picker_appearance():
         return flask.jsonify({'error': 'auth'}), 401
     creds = _load_creds()
     if 'picker_title' in flask.request.form:
-        creds['picker_title']      = flask.request.form.get('picker_title', '').strip()
-        creds['picker_logo_above'] = flask.request.form.get('picker_logo_above') == '1'
+        creds['picker_title']        = flask.request.form.get('picker_title', '').strip()
+        creds['picker_window_title'] = flask.request.form.get('picker_window_title', '').strip()
+        creds['picker_logo_above']   = flask.request.form.get('picker_logo_above') == '1'
     if flask.request.form.get('picker_logo_clear') == '1':
         creds['picker_logo_b64'] = ''
         creds.pop('picker_logo_mime', None)
@@ -451,10 +457,11 @@ def route_backup_keys():
         'version': 1,
         'keys': keys,
         'appearance': {
-            'picker_title':      creds.get('picker_title'),
-            'picker_logo_b64':   creds.get('picker_logo_b64', ''),
-            'picker_logo_mime':  creds.get('picker_logo_mime', ''),
-            'picker_logo_above': creds.get('picker_logo_above', False),
+            'picker_title':        creds.get('picker_title'),
+            'picker_window_title': creds.get('picker_window_title'),
+            'picker_logo_b64':     creds.get('picker_logo_b64', ''),
+            'picker_logo_mime':    creds.get('picker_logo_mime', ''),
+            'picker_logo_above':   creds.get('picker_logo_above', False),
         },
     }
     return flask.Response(
@@ -487,7 +494,7 @@ def route_restore_keys():
         _save_keys(keys)
         if appearance:
             creds = _load_creds()
-            for field in ('picker_title', 'picker_logo_b64', 'picker_logo_mime', 'picker_logo_above'):
+            for field in ('picker_title', 'picker_window_title', 'picker_logo_b64', 'picker_logo_mime', 'picker_logo_above'):
                 if field in appearance:
                     creds[field] = appearance[field]
             _save_creds(creds)
@@ -700,21 +707,23 @@ def on_relay_register(data):
             # Same socket re-registering (e.g. settings change) — update in place
             meet_id = existing_id
             _meets[meet_id].update({
-                'name':     data.get('name', ''),
-                'location': data.get('location', ''),
-                'sport':    data.get('sport', ''),
-                'settings': data.get('settings', {}),
+                'name':             data.get('name', ''),
+                'location':         data.get('location', ''),
+                'sport':            data.get('sport', ''),
+                'app_window_title': data.get('app_window_title', ''),
+                'settings':         data.get('settings', {}),
             })
         else:
             meet_id = secrets.token_urlsafe(8)
             _meets[meet_id] = {
-                'relay_key':       key,
-                'relay_sid':       sid,
-                'organizer':       keys[key]['organizer'],
-                'name':            data.get('name', ''),
-                'location':        data.get('location', ''),
-                'sport':           data.get('sport', ''),
-                'settings':        data.get('settings', {}),
+                'relay_key':        key,
+                'relay_sid':        sid,
+                'organizer':        keys[key]['organizer'],
+                'name':             data.get('name', ''),
+                'location':         data.get('location', ''),
+                'sport':            data.get('sport', ''),
+                'app_window_title': data.get('app_window_title', ''),
+                'settings':         data.get('settings', {}),
                 'connected_at':    datetime.datetime.now().strftime('%H:%M:%S'),
                 'last_scoreboard': {},
                 'last_results':    {},

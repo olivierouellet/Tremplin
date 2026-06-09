@@ -919,6 +919,14 @@ function onPasswordInput(form) {
                                 <input type="text" name="meet_sport" value="{{ meet_sport }}"
                                        class="form-control" placeholder="e.g. Swimming">
                             </div>
+                            <div class="form-group" style="margin-bottom:10px;">
+                                <label style="font-weight:normal; font-size:0.88em; color:#888;">App / Window Title <small style="color:#555;">(browser tab &amp; home screen title for mobile.html)</small></label>
+                                <div style="display:flex; gap:6px;">
+                                    <input type="text" name="app_window_title" id="app_window_title" value="{{ app_window_title }}"
+                                           class="form-control" placeholder="Tremplin">
+                                    <button type="submit" class="btn btn-default btn-sm" style="white-space:nowrap;">Add</button>
+                                </div>
+                            </div>
                             <div class="form-group" style="margin-bottom:0;">
                                 <label style="font-weight:normal; font-size:0.88em; color:#888;">Column label style</label>
                                 <select name="cloud_label_style" class="form-control" onchange="_fsubmit(this.closest('form'))">

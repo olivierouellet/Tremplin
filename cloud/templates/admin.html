@@ -172,9 +172,14 @@
                 <h2 style="margin-bottom:14px;">Picker Page</h2>
                 <form id="picker-form" onsubmit="savePickerAppearance(this); return false;" enctype="multipart/form-data">
                     <div class="panel-row">
+                        <span class="panel-label">Window Title</span>
+                        <input type="text" name="picker_window_title" value="{{ picker_window_title_form }}" placeholder="Tremplin" style="flex:1;">
+                        <span style="font-size:0.78em;color:#555;margin-left:8px;">browser tab / app title</span>
+                    </div>
+                    <div class="panel-row">
                         <span class="panel-label">Title</span>
                         <input type="text" name="picker_title" value="{{ picker_title_form }}" placeholder="Tremplin" style="flex:1;">
-                        <span style="font-size:0.78em;color:#555;margin-left:8px;">leave blank to hide</span>
+                        <span style="font-size:0.78em;color:#555;margin-left:8px;">heading shown on page — leave blank to hide</span>
                     </div>
                     <div class="panel-row" style="align-items:flex-start;flex-direction:column;gap:6px;">
                         <span style="font-size:0.8em;color:#555;">Logo</span>

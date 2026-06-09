@@ -26,6 +26,7 @@ def _get_metadata():
         'name':     state.settings.get('meet_title') or state.lenex_meet_info.get('name', ''),
         'location': state.lenex_meet_info.get('city')  or state.settings.get('meet_location', ''),
         'sport':    state.settings.get('meet_sport', ''),
+        'app_window_title': state.settings.get('app_window_title', ''),
         'settings': {
             'num_lanes':            int(state.settings.get('num_lanes', 8)),
             'show_podium':          state.settings.get('show_podium', True),
