@@ -130,6 +130,16 @@ def _save_creds(creds):
         json.dump(creds, f, indent=2)
 
 
+def _picker_appearance():
+    creds = _load_creds()
+    raw = creds.get('picker_title')
+    return {
+        'picker_title_form': 'Tremplin' if raw is None else raw,
+        'has_picker_logo':   bool(creds.get('picker_logo_b64', '')),
+        'picker_logo_above': creds.get('picker_logo_above', False),
+    }
+
+
 def _check_admin():
     auth = flask.request.authorization
     if not auth:
@@ -156,7 +166,12 @@ def route_index():
         meets = [{'id': mid, 'name': m['name'], 'location': m['location'],
                   'sport': m['sport'], 'organizer': m['organizer']}
                  for mid, m in _meets.items()]
-    return flask.render_template('picker.html', meets=meets, t=_load_cloud_strings())
+    creds     = _load_creds()
+    raw_title = creds.get('picker_title')
+    return flask.render_template('picker.html', meets=meets, t=_load_cloud_strings(),
+        picker_title=('Tremplin' if raw_title is None else raw_title),
+        picker_logo=bool(creds.get('picker_logo_b64', '')),
+        picker_logo_above=creds.get('picker_logo_above', False))
 
 
 @app.route('/mobile')
@@ -371,6 +386,41 @@ def route_icon(meet_id):
                           headers={'Cache-Control': 'public, max-age=3600'})
 
 
+@app.route('/picker_logo')
+def route_picker_logo():
+    creds    = _load_creds()
+    logo_b64 = creds.get('picker_logo_b64', '')
+    if not logo_b64:
+        flask.abort(404)
+    data = base64.b64decode(logo_b64)
+    mime = creds.get('picker_logo_mime', 'image/png')
+    return flask.Response(data, mimetype=mime,
+                          headers={'Cache-Control': 'public, max-age=300'})
+
+
+@app.route('/admin/picker_appearance', methods=['POST'])
+def route_picker_appearance():
+    denied = _require_admin()
+    if denied:
+        return flask.jsonify({'error': 'auth'}), 401
+    creds = _load_creds()
+    if 'picker_title' in flask.request.form:
+        creds['picker_title']      = flask.request.form.get('picker_title', '').strip()
+        creds['picker_logo_above'] = flask.request.form.get('picker_logo_above') == '1'
+    if flask.request.form.get('picker_logo_clear') == '1':
+        creds['picker_logo_b64'] = ''
+        creds.pop('picker_logo_mime', None)
+    else:
+        logo = flask.request.files.get('picker_logo')
+        if logo and logo.filename:
+            data = logo.read()
+            mime = logo.content_type or 'image/png'
+            creds['picker_logo_b64']  = base64.b64encode(data).decode()
+            creds['picker_logo_mime'] = mime
+    _save_creds(creds)
+    return flask.jsonify({'ok': True})
+
+
 @app.route('/admin/backup/keys')
 def route_backup_keys():
     denied = _require_admin()
@@ -378,13 +428,24 @@ def route_backup_keys():
         return denied
     try:
         with open(KEYS_FILE) as f:
-            data = f.read()
-    except FileNotFoundError:
-        data = '{}'
+            keys = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        keys = {}
+    creds  = _load_creds()
+    backup = {
+        'version': 1,
+        'keys': keys,
+        'appearance': {
+            'picker_title':      creds.get('picker_title'),
+            'picker_logo_b64':   creds.get('picker_logo_b64', ''),
+            'picker_logo_mime':  creds.get('picker_logo_mime', ''),
+            'picker_logo_above': creds.get('picker_logo_above', False),
+        },
+    }
     return flask.Response(
-        data,
+        json.dumps(backup, indent=2),
         mimetype='application/json',
-        headers={'Content-Disposition': 'attachment; filename="tremplin-keys.json"'}
+        headers={'Content-Disposition': 'attachment; filename="tremplin-backup.json"'}
     )
 
 
@@ -400,8 +461,22 @@ def route_restore_keys():
         data = json.loads(uploaded.read())
         if not isinstance(data, dict):
             raise ValueError('expected a JSON object')
-        _save_keys(data)
-        return flask.jsonify({'ok': True, 'count': len(data)})
+        if 'keys' in data:
+            keys       = data['keys']
+            appearance = data.get('appearance', {})
+        else:
+            keys       = data
+            appearance = {}
+        if not isinstance(keys, dict):
+            raise ValueError('invalid keys section')
+        _save_keys(keys)
+        if appearance:
+            creds = _load_creds()
+            for field in ('picker_title', 'picker_logo_b64', 'picker_logo_mime', 'picker_logo_above'):
+                if field in appearance:
+                    creds[field] = appearance[field]
+            _save_creds(creds)
+        return flask.jsonify({'ok': True, 'count': len(keys)})
     except (json.JSONDecodeError, ValueError) as e:
         return flask.jsonify({'error': f'Invalid file: {e}'}), 400
     except Exception as e:
@@ -567,7 +642,8 @@ def route_admin():
                                          t=t, creds_error=error,
                                          locales=_available_locales(),
                                          current_locale=_load_creds().get('locale', ''),
-                                         has_deploy=bool(os.environ.get('DEPLOY_WEBHOOK_URL')))
+                                         has_deploy=bool(os.environ.get('DEPLOY_WEBHOOK_URL')),
+                                         **_picker_appearance())
         return flask.redirect(flask.url_for('route_admin'))
 
     with _lock:
@@ -581,7 +657,8 @@ def route_admin():
                                  t=_load_cloud_strings(), creds_error=None,
                                  locales=_available_locales(),
                                  current_locale=_load_creds().get('locale', ''),
-                                 has_deploy=bool(os.environ.get('DEPLOY_WEBHOOK_URL')))
+                                 has_deploy=bool(os.environ.get('DEPLOY_WEBHOOK_URL')),
+                                 **_picker_appearance())
 
 
 # ── SocketIO — /relay namespace (Pi connections) ───────────────────────────────

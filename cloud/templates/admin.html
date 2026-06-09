@@ -167,6 +167,42 @@
                     </select>
                 </form>
             </div>
+
+            <div class="panel" style="margin-top:16px;">
+                <h2 style="margin-bottom:14px;">Picker Page</h2>
+                <form id="picker-form" onsubmit="savePickerAppearance(this); return false;" enctype="multipart/form-data">
+                    <div class="panel-row">
+                        <span class="panel-label">Title</span>
+                        <input type="text" name="picker_title" value="{{ picker_title_form }}" placeholder="Tremplin" style="flex:1;">
+                        <span style="font-size:0.78em;color:#555;margin-left:8px;">leave blank to hide</span>
+                    </div>
+                    <div class="panel-row" style="align-items:flex-start;flex-direction:column;gap:6px;">
+                        <span style="font-size:0.8em;color:#555;">Logo</span>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <label style="display:inline-block;font-size:0.8em;border:1px solid #333;color:#aaa;padding:4px 10px;border-radius:4px;cursor:pointer;" onmouseover="this.style.color='#fff';this.style.borderColor='#666'" onmouseout="this.style.color='#aaa';this.style.borderColor='#333'">
+                                Upload Image<input type="file" name="picker_logo" accept="image/*" style="display:none;" onchange="previewPickerLogo(this)">
+                            </label>
+                            <button type="button" class="danger" id="picker-logo-remove-btn" onclick="clearPickerLogo()" {% if not has_picker_logo %}hidden{% endif %}>Remove</button>
+                            <img id="picker-logo-current" src="{{ '/picker_logo' if has_picker_logo else '' }}" style="max-height:36px;max-width:72px;border-radius:4px;border:1px solid #333;flex-shrink:0;" {% if not has_picker_logo %}hidden{% endif %}>
+                        </div>
+                        <div id="picker-logo-preview" style="display:none;margin-top:4px;">
+                            <img id="picker-logo-preview-img" style="max-height:60px;max-width:120px;border-radius:4px;border:1px solid #333;">
+                        </div>
+                    </div>
+                    <div class="panel-row">
+                        <span class="panel-label">Position</span>
+                        <label style="display:flex;align-items:center;gap:6px;font-size:0.88em;cursor:pointer;">
+                            <input type="checkbox" name="picker_logo_above" value="1" {% if picker_logo_above %}checked{% endif %}>
+                            Image above title
+                        </label>
+                    </div>
+                    <div class="panel-row">
+                        <span class="panel-label"></span>
+                        <button type="submit">Save</button>
+                        <span id="picker-appearance-status" style="font-size:0.85em;color:#666;margin-left:8px;"></span>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <!-- ── Update & Backup ── -->
@@ -376,11 +412,65 @@
         }
         {% endif %}
 
+        // ── Picker appearance ─────────────────────────────────────────────────
+        function previewPickerLogo(input) {
+            if (!input.files.length) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                document.getElementById('picker-logo-preview-img').src = e.target.result;
+                document.getElementById('picker-logo-preview').hidden = false;
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+
+        function savePickerAppearance(form) {
+            const status = document.getElementById('picker-appearance-status');
+            status.style.color = '#888'; status.textContent = 'Saving…';
+            fetch('/admin/picker_appearance', { method: 'POST', body: new FormData(form) })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.ok) {
+                        status.style.color = '#4a4'; status.textContent = 'Saved.';
+                        const hasFile = form.querySelector('input[type=file]').files.length > 0;
+                        if (hasFile) {
+                            const cur = document.getElementById('picker-logo-current');
+                            cur.src = '/picker_logo?' + Date.now();
+                            cur.hidden = false;
+                            document.getElementById('picker-logo-remove-btn').hidden = false;
+                            document.getElementById('picker-logo-preview').hidden = true;
+                            form.querySelector('input[type=file]').value = '';
+                        }
+                    } else {
+                        status.style.color = '#c55'; status.textContent = 'Error.';
+                    }
+                })
+                .catch(() => { status.style.color = '#c55'; status.textContent = 'Failed.'; });
+        }
+
+        function clearPickerLogo() {
+            if (!confirm('Remove the picker logo image?')) return;
+            const status = document.getElementById('picker-appearance-status');
+            status.style.color = '#888'; status.textContent = 'Removing…';
+            const fd = new FormData(); fd.append('picker_logo_clear', '1');
+            fetch('/admin/picker_appearance', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.ok) {
+                        document.getElementById('picker-logo-current').hidden = true;
+                        document.getElementById('picker-logo-remove-btn').hidden = true;
+                        status.style.color = '#4a4'; status.textContent = 'Removed.';
+                    } else {
+                        status.style.color = '#c55'; status.textContent = 'Error.';
+                    }
+                })
+                .catch(() => { status.style.color = '#c55'; status.textContent = 'Failed.'; });
+        }
+
         // ── Restore keys ──────────────────────────────────────────────────────
         function restoreKeys(input) {
             const status = document.getElementById('restore-status');
             if (!input.files.length) return;
-            if (!confirm('This will replace all current organizer keys. Are you sure?')) {
+            if (!confirm('This will replace all current organizer keys and appearance settings. Are you sure?')) {
                 input.value = ''; return;
             }
             status.style.color = '#888'; status.textContent = 'Uploading…';

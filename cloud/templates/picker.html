@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tremplin — {{ t.page_title }}</title>
+    <title>{{ picker_title or 'Tremplin' }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -52,7 +52,15 @@
 <body>
     <div id="ptr-edge"></div>
     <div id="ptr-wrap"><div id="ptr-indicator">↻</div></div>
-    <h1>{{ t.page_title }}</h1>
+    {% if picker_logo and picker_logo_above %}
+    <img src="/picker_logo" style="max-width:200px;max-height:120px;margin-bottom:16px;border-radius:8px;display:block;">
+    {% endif %}
+    {% if picker_title %}
+    <h1>{{ picker_title }}</h1>
+    {% endif %}
+    {% if picker_logo and not picker_logo_above %}
+    <img src="/picker_logo" style="max-width:200px;max-height:120px;margin-bottom:16px;border-radius:8px;display:block;">
+    {% endif %}
     {% if meets %}
     <div class="meets">
         {% for meet in meets %}
