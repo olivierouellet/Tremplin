@@ -50,5 +50,6 @@
     "cloud_relay_key": "",
     "meet_location": "",
     "meet_sport": "",
-    "app_window_title": ""
+    "app_window_title": "",
+    "cloud_meet_title": ""
 }

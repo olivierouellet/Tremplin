@@ -245,7 +245,7 @@ def route_settings():
                 modified = True
 
         if 'cloud_settings_submit' in flask.request.form:
-            for key in ('cloud_relay_url', 'cloud_relay_key', 'meet_location', 'meet_sport', 'cloud_label_style', 'app_window_title'):
+            for key in ('cloud_relay_url', 'cloud_relay_key', 'meet_location', 'meet_sport', 'cloud_label_style', 'app_window_title', 'cloud_meet_title'):
                 val = flask.request.form.get(key, '').strip()
                 if val != state.settings.get(key, ''):
                     state.settings[key] = val
@@ -408,6 +408,7 @@ def route_settings():
         meet_sport=state.settings.get('meet_sport', ''),
         cloud_label_style=state.settings.get('cloud_label_style', 'short'),
         app_window_title=state.settings.get('app_window_title', ''),
+        cloud_meet_title=state.settings.get('cloud_meet_title', ''),
         has_home_icon=os.path.exists(state.HOME_ICON_PATH),
         icon_error=locals().get('icon_error'),
         active_home_icon=state.settings.get('active_home_icon', ''),

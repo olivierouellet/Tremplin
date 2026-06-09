@@ -23,7 +23,7 @@ def _get_metadata():
             flat_labels[key] = val
 
     meta = {
-        'name':     state.settings.get('meet_title') or state.lenex_meet_info.get('name', ''),
+        'name':     state.settings.get('cloud_meet_title') or state.settings.get('meet_title') or state.lenex_meet_info.get('name', ''),
         'location': state.lenex_meet_info.get('city')  or state.settings.get('meet_location', ''),
         'sport':    state.settings.get('meet_sport', ''),
         'app_window_title': state.settings.get('app_window_title', ''),

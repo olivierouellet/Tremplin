@@ -919,20 +919,29 @@ function onPasswordInput(form) {
                                 <input type="text" name="meet_sport" value="{{ meet_sport }}"
                                        class="form-control" placeholder="e.g. Swimming">
                             </div>
-                            <div class="form-group" style="margin-bottom:10px;">
-                                <label style="font-weight:normal; font-size:0.88em; color:#888;">App / Window Title <small style="color:#555;">(browser tab &amp; home screen title for mobile.html)</small></label>
-                                <div style="display:flex; gap:6px;">
-                                    <input type="text" name="app_window_title" id="app_window_title" value="{{ app_window_title }}"
-                                           class="form-control" placeholder="Tremplin">
-                                    <button type="submit" class="btn btn-default btn-sm" style="white-space:nowrap;">Add</button>
-                                </div>
-                            </div>
                             <div class="form-group" style="margin-bottom:0;">
                                 <label style="font-weight:normal; font-size:0.88em; color:#888;">Column label style</label>
                                 <select name="cloud_label_style" class="form-control" onchange="_fsubmit(this.closest('form'))">
                                     <option value="short" {% if cloud_label_style == 'short' %}selected{% endif %}>Short (EV, HT, LN…)</option>
                                     <option value="long"  {% if cloud_label_style == 'long'  %}selected{% endif %}>Long (EVENT, HEAT, LANE…)</option>
                                 </select>
+                            </div>
+                        </div>
+                        <div style="background:#1a1a1a; border-radius:6px; padding:14px 18px; margin-bottom:16px;">
+                            <div style="font-size:0.9em; font-weight:bold; margin-bottom:10px;">App / Window Title</div>
+                            <p style="font-size:0.82em; color:#666; margin-bottom:10px;">Browser tab &amp; home screen title for <code>mobile.html</code>. Leave blank to use the meet name.</p>
+                            <div style="display:flex; gap:6px;">
+                                <input type="text" name="app_window_title" id="app_window_title" value="{{ app_window_title }}"
+                                       class="form-control" placeholder="Tremplin">
+                                <button type="submit" class="btn btn-default btn-sm" style="white-space:nowrap;">Save</button>
+                            </div>
+                            <div style="margin-top:10px;">
+                                <p style="font-size:0.82em; color:#666; margin-bottom:6px;">Competition title shown on the <code>picker.html</code> meet card. Leave blank to use the meet title.</p>
+                                <div style="display:flex; gap:6px;">
+                                    <input type="text" name="cloud_meet_title" id="cloud_meet_title" value="{{ cloud_meet_title }}"
+                                           class="form-control" placeholder="{{ meet_title or 'Meet title' }}">
+                                    <button type="submit" class="btn btn-default btn-sm" style="white-space:nowrap;">Save</button>
+                                </div>
                             </div>
                         </div>
                         <div style="background:#1a1a1a; border-radius:6px; padding:18px; margin-bottom:16px;">
