@@ -142,3 +142,34 @@ def route_theme_delete_all():
     socketio.emit('reload', namespace='/results')
     relay.relay_emit('reload', {})
     return flask.redirect('/settings')
+
+
+@bp.route('/picker_image_delete')
+@flask_login.login_required
+def route_picker_image_delete():
+    filename = os.path.basename(flask.request.args.get('file', '').strip())
+    if filename:
+        path = os.path.join(state.PICKER_DIR, filename)
+        if os.path.isfile(path):
+            os.remove(path)
+        if state.settings.get('active_picker_image') == filename:
+            state.settings['active_picker_image'] = ''
+            with open(state.settings_file, 'wt') as f:
+                json.dump(state.settings, f, sort_keys=True, indent=4)
+            relay.update_metadata()
+    return flask.redirect('/settings#tab-cloud')
+
+
+@bp.route('/picker_image_delete_all')
+@flask_login.login_required
+def route_picker_image_delete_all():
+    if os.path.isdir(state.PICKER_DIR):
+        for f in os.listdir(state.PICKER_DIR):
+            fp = os.path.join(state.PICKER_DIR, f)
+            if os.path.isfile(fp):
+                os.remove(fp)
+    state.settings['active_picker_image'] = ''
+    with open(state.settings_file, 'wt') as f:
+        json.dump(state.settings, f, sort_keys=True, indent=4)
+    relay.update_metadata()
+    return flask.redirect('/settings#tab-cloud')

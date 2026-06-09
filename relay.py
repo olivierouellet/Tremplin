@@ -50,6 +50,9 @@ def _get_metadata():
     icon = _icon_b64()
     if icon:
         meta['settings']['home_icon_b64'] = icon
+    picker_img = _picker_image_b64()
+    if picker_img:
+        meta['settings']['picker_image_b64'] = picker_img
     return meta
 
 
@@ -58,6 +61,19 @@ def _icon_b64():
         if os.path.exists(state.HOME_ICON_PATH):
             with open(state.HOME_ICON_PATH, 'rb') as f:
                 return base64.b64encode(f.read()).decode()
+    except Exception:
+        pass
+    return None
+
+
+def _picker_image_b64():
+    try:
+        active = state.settings.get('active_picker_image', '')
+        if active:
+            path = os.path.join(state.PICKER_DIR, active)
+            if os.path.exists(path):
+                with open(path, 'rb') as f:
+                    return base64.b64encode(f.read()).decode()
     except Exception:
         pass
     return None

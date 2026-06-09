@@ -30,6 +30,7 @@ IMAGES_DIR             = os.path.join(SCOREBOARD_DIR, 'images')
 ICONS_DIR              = os.path.join(SCOREBOARD_DIR, 'icons')
 HOME_ICON_PATH         = os.path.join(ICONS_DIR, 'home_icon.png')
 HOME_ICON_512_PATH     = os.path.join(ICONS_DIR, 'home_icon_512.png')
+PICKER_DIR             = os.path.join(SCOREBOARD_DIR, 'picker')
 MEET_FOLDER            = os.path.join(SCOREBOARD_DIR, 'meet')
 CUSTOM_LOCALE_FOLDER          = os.path.join(SCOREBOARD_DIR, 'locale')
 THEME_FOLDER           = os.path.join(app_dir, 'themes')
@@ -166,8 +167,9 @@ _os_update_log_done    = None
 # ── Init ───────────────────────────────────────────────────────────────────────
 
 def _ensure_data_dirs():
-    for d in (SCOREBOARD_DIR, MEET_FOLDER, IMAGES_DIR, ICONS_DIR, CUSTOM_SESSIONS_FOLDER,
-              CUSTOM_LOCALE_FOLDER, CUSTOM_THEME_FOLDER, CUSTOM_DECODERS_FOLDER):
+    for d in (SCOREBOARD_DIR, MEET_FOLDER, IMAGES_DIR, ICONS_DIR, PICKER_DIR,
+              CUSTOM_SESSIONS_FOLDER, CUSTOM_LOCALE_FOLDER, CUSTOM_THEME_FOLDER,
+              CUSTOM_DECODERS_FOLDER):
         os.makedirs(d, exist_ok=True)
     if not os.path.exists(settings_file) and os.path.exists(_settings_default):
         import shutil

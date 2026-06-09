@@ -250,6 +250,27 @@ def route_settings():
                 if val != state.settings.get(key, ''):
                     state.settings[key] = val
                     modified = True
+            # ── Picker image ──────────────────────────────────────────────────
+            picker_image_error = None
+            picker_image_file  = flask.request.files.get('picker_image')
+            if picker_image_file and picker_image_file.filename:
+                try:
+                    from PIL import Image
+                    img      = Image.open(picker_image_file.stream)
+                    orig_name = os.path.basename(picker_image_file.filename)
+                    img.save(os.path.join(state.PICKER_DIR, orig_name), optimize=True)
+                    state.settings['active_picker_image'] = orig_name
+                    modified = True
+                except Exception as e:
+                    picker_image_error = f'Could not process image: {e}'
+            else:
+                selected_pi = flask.request.form.get('selected_picker_image', '').strip()
+                prev_pi     = state.settings.get('active_picker_image', '')
+                if selected_pi != prev_pi:
+                    state.settings['active_picker_image'] = selected_pi
+                    modified = True
+
+            # ── Home screen icon ──────────────────────────────────────────────
             if flask.request.form.get('remove_home_icon'):
                 for p in (state.HOME_ICON_PATH, state.HOME_ICON_512_PATH):
                     if os.path.exists(p):
@@ -394,6 +415,12 @@ def route_settings():
             if f.endswith('.png') and f not in ('home_icon.png', 'home_icon_512.png')
             and os.path.isfile(os.path.join(state.ICONS_DIR, f))
         ),
+        active_picker_image=state.settings.get('active_picker_image', ''),
+        picker_image_error=locals().get('picker_image_error'),
+        picker_image_list=sorted(
+            f for f in (os.listdir(state.PICKER_DIR) if os.path.isdir(state.PICKER_DIR) else [])
+            if os.path.isfile(os.path.join(state.PICKER_DIR, f))
+        ),
     )
 
 
@@ -411,6 +438,17 @@ def route_home_icon_512():
     if not os.path.exists(path):
         flask.abort(404)
     return flask.send_file(path, mimetype='image/png', max_age=0, conditional=True)
+
+
+@bp.route('/picker_image')
+def route_picker_image():
+    active = state.settings.get('active_picker_image', '')
+    if not active:
+        flask.abort(404)
+    path = os.path.join(state.PICKER_DIR, active)
+    if not os.path.isfile(path):
+        flask.abort(404)
+    return flask.send_file(path, max_age=0, conditional=True)
 
 
 @bp.route('/manifest.json')

@@ -164,7 +164,8 @@ def _require_admin():
 def route_index():
     with _lock:
         meets = [{'id': mid, 'name': m['name'], 'location': m['location'],
-                  'sport': m['sport'], 'organizer': m['organizer']}
+                  'sport': m['sport'], 'organizer': m['organizer'],
+                  'has_picker_image': bool(m.get('settings', {}).get('picker_image_b64', ''))}
                  for mid, m in _meets.items()]
     creds     = _load_creds()
     raw_title = creds.get('picker_title')
@@ -384,6 +385,20 @@ def route_icon(meet_id):
     data = base64.b64decode(icon_b64)
     return flask.Response(data, mimetype='image/png',
                           headers={'Cache-Control': 'public, max-age=3600'})
+
+
+@app.route('/picker_image/<meet_id>')
+def route_meet_picker_image(meet_id):
+    with _lock:
+        meet = _meets.get(meet_id)
+    if not meet:
+        flask.abort(404)
+    img_b64 = meet.get('settings', {}).get('picker_image_b64', '')
+    if not img_b64:
+        flask.abort(404)
+    data = base64.b64decode(img_b64)
+    return flask.Response(data, mimetype='image/png',
+                          headers={'Cache-Control': 'public, max-age=60'})
 
 
 @app.route('/picker_logo')

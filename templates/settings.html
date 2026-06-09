@@ -928,6 +928,38 @@ function onPasswordInput(form) {
                             </div>
                         </div>
                         <div style="background:#1a1a1a; border-radius:6px; padding:18px; margin-bottom:16px;">
+                            <div style="font-size:0.9em; font-weight:bold; margin-bottom:6px;">Picker Image</div>
+                            <p style="font-size:0.82em; color:#666; margin-bottom:10px;">Shown on the left of each meet card on the picker page.</p>
+                            {% if picker_image_error %}
+                            <p style="color:#f66; font-size:0.82em; margin-bottom:8px;">{{ picker_image_error }}</p>
+                            {% endif %}
+                            <select name="selected_picker_image" class="form-control" style="margin-bottom:4px;" onchange="_fsubmit(this.closest('form'))">
+                                <option value="" {% if not active_picker_image %}selected{% endif %}>— None —</option>
+                                {% for img in picker_image_list %}
+                                <option value="{{ img }}" {% if img == active_picker_image %}selected{% endif %}>{{ img }}</option>
+                                {% endfor %}
+                            </select>
+                            <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap; overflow:hidden;">
+                                <div class="file-picker" style="flex-shrink:0;">
+                                    <label class="btn btn-default btn-xs" style="margin:0; font-weight:normal; cursor:pointer;">
+                                        Add Image
+                                        <input type="file" name="picker_image" accept="image/*" style="display:none;"
+                                               onchange="var m=this.closest('.file-picker').querySelector('.file-msg');m.style.opacity='1';m.style.transition='none';m.textContent='Uploading…';_fsubmit(this.closest('form'))">
+                                    </label>
+                                    <span class="file-msg" style="font-size:0.85em; color:#888; display:inline; margin-left:4px;"></span>
+                                </div>
+                                {% if active_picker_image %}
+                                <a href="/picker_image_delete?file={{ active_picker_image }}" class="btn btn-default btn-xs danger" style="flex-shrink:0;" onclick="return confirm('Delete {{ active_picker_image }}?')">Delete</a>
+                                {% endif %}
+                                {% if picker_image_list %}
+                                <a href="/picker_image_delete_all" class="btn btn-default btn-xs danger" style="flex-shrink:0;" onclick="return confirm('Delete all picker images?')">Delete All</a>
+                                {% endif %}
+                                {% if active_picker_image %}
+                                <img src="/picker_image" style="height:28px; border-radius:4px; border:1px solid #333; flex-shrink:0;">
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div style="background:#1a1a1a; border-radius:6px; padding:18px; margin-bottom:16px;">
                             <div style="font-size:0.9em; font-weight:bold; margin-bottom:6px;">Home Screen Icon</div>
                             <p style="font-size:0.82em; color:#666; margin-bottom:10px;">Shown when attendees add the scoreboard to their iOS or Android home screen. Must be a square PNG, 512×512 or 1024×1024 px.</p>
                             {% if icon_error %}
