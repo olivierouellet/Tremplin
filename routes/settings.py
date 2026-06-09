@@ -456,8 +456,9 @@ def route_picker_image():
 @bp.route('/manifest.json')
 def route_manifest():
     import json as _json
-    name = (state.lenex_meet_info.get('name') or
-            state.settings.get('meet_title') or 'Tremplin')
+    app_title = (state.settings.get('app_window_title') or
+                 state.lenex_meet_info.get('name') or
+                 state.settings.get('meet_title') or 'Tremplin')
     icons = ([
         {'src': '/home_icon',     'sizes': '192x192', 'type': 'image/png'},
         {'src': '/home_icon_512', 'sizes': '512x512', 'type': 'image/png'},
@@ -465,8 +466,8 @@ def route_manifest():
         {'src': '/static/img/default_mobile_icon.png', 'sizes': '1024x1024', 'type': 'image/png'},
     ])
     manifest = {
-        'name':             name,
-        'short_name':       'Tremplin',
+        'name':             app_title,
+        'short_name':       app_title,
         'start_url':        '/',
         'display':          'standalone',
         'background_color': '#000000',

@@ -59,7 +59,10 @@ def route_live_mobile():
 
 @bp.route('/mobile')
 def route_mobile():
-    return flask.render_template('mobile.html', t=state._mobile_strings())
+    app_title = (state.settings.get('app_window_title') or
+                 state.settings.get('meet_title') or 'Tremplin')
+    return flask.render_template('mobile.html', t=state._mobile_strings(),
+                                 app_title=app_title)
 
 
 @bp.route('/results')

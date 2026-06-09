@@ -366,9 +366,10 @@ def route_manifest(meet_id):
     ] if has_icon else [
         {'src': '/static/img/default_mobile_icon.png', 'sizes': '1024x1024', 'type': 'image/png'},
     ])
+    app_title = meet.get('app_window_title') or meet.get('name') or 'Tremplin'
     manifest = {
-        'name':             meet.get('name') or 'Tremplin',
-        'short_name':       'Tremplin',
+        'name':             app_title,
+        'short_name':       app_title,
         'start_url':        f'/mobile?meet={meet_id}',
         'display':          'standalone',
         'background_color': '#000000',
