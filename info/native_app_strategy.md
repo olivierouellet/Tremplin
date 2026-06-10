@@ -108,5 +108,25 @@ The settings panel stays as a browser-based web page — it is used by the meet 
 
 ## Open Questions
 
-- Whether the RPi scoreboard server also migrates to FastAPI, or only the cloud server
 - Whether the web browser scoreboard (for users who access via a laptop/desktop) is maintained in parallel with the native clients or deprecated
+
+## Validated Results from Meet Manager
+
+A separate idea explored: showing officially validated heat results (not just live timing console data) on the scoreboard, sourced from Splash Meet Manager.
+
+- **Live Results (PDF)**: Meet Manager can auto-publish start lists/results as PDF reports via FTP. An embedded FTP server (`pyftpdlib`) on the Tremplin Pi could receive these, but PDFs aren't structured data — parsing the result-list table with `pdfplumber` is feasible but template/locale-fragile. A simpler fallback is to just serve the PDFs as documents on a "Results" page rather than parsing them into live data.
+- **Database server (preferred, untested)**: Meet Manager can store meet data in PostgreSQL/MariaDB/MySQL instead of an `.mdb` file, with near-instant sync across clients. If Tremplin ran Postgres on the same Pi, it could query results directly — no FTP, no PDF parsing. The schema is undocumented, so this needs a spike: point a test Meet Manager install at a local Postgres DB, run a small meet, and inspect the resulting tables for result/heat/time data before committing to this approach.
+- Either way, no separate database is needed for Tremplin's own state — results would slot into the existing in-memory `state.py` structures (e.g., a `lenex_results` dict), broadcast over the existing `/results` Socket.IO namespace.
+
+## Repository structure (multi-platform)
+
+As Tremplin grows beyond the browser-based scoreboard to a Qt TV display and native iOS/Android apps, plan for separate repos rather than a monorepo:
+
+- **Tremplin** (this repo) — server, web scoreboard/admin UI.
+- **Tremplin-tv** — Qt TV display client for the Pi.
+- **Tremplin-ios** — iOS app.
+- **Tremplin-android** — Android app.
+
+Each platform has its own toolchain, dependencies, and (for mobile) app store release process, so keeping them separate avoids cluttering CI and PRs across unrelated stacks.
+
+Avoid a dedicated "common" repo unless real shared *logic* emerges across platforms (unlikely given how different Python/Qt/Swift/Kotlin are). Instead, treat the WebSocket/REST API exposed by `extensions.py` and `relay.py` as the shared contract: document it (OpenAPI/JSON schema or markdown) in this repo's `docs/`, version it with the server's API version, and have each client repo follow it as the source of truth.
