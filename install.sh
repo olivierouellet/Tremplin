@@ -536,6 +536,28 @@ if [[ "$ROLE" == "kiosk" ]]; then
 EOF
     info "Kiosk autostart configured ($CHROMIUM_BIN) → $SCOREBOARD_URL"
 
+    section "Desktop wallpaper"
+    WALLPAPER="$HOME/.config/tremplin/scoreboard_bg.png"
+    WALLPAPER_URL="${REPO_URL%.git}"
+    WALLPAPER_URL="${WALLPAPER_URL/github.com/raw.githubusercontent.com}/master/static/img/scoreboard_bg.png"
+    mkdir -p "$(dirname "$WALLPAPER")"
+    if curl -fsSL "$WALLPAPER_URL" -o "$WALLPAPER"; then
+        PCMANFM_CONF="$HOME/.config/pcmanfm/LXDE-pi"
+        mkdir -p "$PCMANFM_CONF"
+        for conf in "$PCMANFM_CONF/desktop-items-0.conf" "$PCMANFM_CONF/desktop-items-1.conf"; do
+            cat > "$conf" <<WALLEOF
+[*]
+wallpaper_mode=fit
+wallpaper_common=1
+wallpaper=$WALLPAPER
+WALLEOF
+        done
+        pcmanfm --set-wallpaper "$WALLPAPER" --wallpaper-mode=fit 2>/dev/null || true
+        info "Desktop wallpaper set to scoreboard_bg.png"
+    else
+        warn "Could not download wallpaper from $WALLPAPER_URL — skipping."
+    fi
+
     section "VNC remote access"
     sudo apt-get install -y realvnc-vnc-server
     if command -v raspi-config &>/dev/null; then
