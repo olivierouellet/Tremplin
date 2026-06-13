@@ -512,6 +512,25 @@ if [[ "$ROLE" == "kiosk" ]]; then
         warn "raspi-config not found — enable manually via: sudo raspi-config → System Options → Boot / Auto Login → Desktop Autologin"
     fi
 
+    section "Display resolution (1080p)"
+    if [[ -f /boot/firmware/config.txt ]]; then
+        CONFIG_TXT="/boot/firmware/config.txt"
+    else
+        CONFIG_TXT="/boot/config.txt"
+    fi
+    if ! grep -q "# Tremplin kiosk" "$CONFIG_TXT"; then
+        sudo tee -a "$CONFIG_TXT" > /dev/null <<EOF
+
+# Tremplin kiosk — force 1920x1080 HDMI output
+hdmi_force_hotplug=1
+hdmi_group=2
+hdmi_mode=82
+EOF
+        info "HDMI forced to 1920x1080 (DMT mode 82) — takes effect after reboot."
+    else
+        info "Display resolution already configured — skipping."
+    fi
+
     section "Chromium kiosk autostart"
     CHROMIUM_BIN="chromium-browser"
     command -v chromium-browser &>/dev/null || CHROMIUM_BIN="chromium"
