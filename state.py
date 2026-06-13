@@ -164,6 +164,10 @@ _update_log_done       = None
 _os_update_log_lines   = []
 _os_update_log_done    = None
 
+_rtc_in_progress       = False
+_rtc_log_lines         = []
+_rtc_log_done          = None
+
 # ── Init ───────────────────────────────────────────────────────────────────────
 
 def _ensure_data_dirs():

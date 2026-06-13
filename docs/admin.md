@@ -45,7 +45,7 @@ Append `?test` to any scoreboard URL to show mode control buttons (Splash, Intro
 | --- | --- |
 | **Meet Setup** | Meet title, Lenex/Hytek file upload, reload names, sponsor image, language, label style, lane count |
 | **Timing** | Serial port, console type, connection status, serial monitor (raw hex packets) |
-| **Clock** | Sync with NTP; set date and time manually when offline |
+| **Clock** | Sync with NTP; set date and time manually when offline; install/remove Adafruit PiRTC (DS3231) hardware clock |
 | **Flow** | Intro, results, and server-update timeouts; finish debounce |
 | **Display** | Show/hide column headers and columns (Name, Club, Delta, Position); podium highlighting |
 | **Theme** | Built-in colour schemes; override individual colours and fonts; save as a custom theme |

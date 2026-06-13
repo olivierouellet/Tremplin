@@ -185,7 +185,7 @@ if [[ "$ROLE" == "server" ]]; then
     section "Sudo permissions"
     SUDOERS_FILE="/etc/sudoers.d/tremplin"
     sudo tee "$SUDOERS_FILE" > /dev/null <<EOF
-$USER ALL=(ALL) NOPASSWD: /usr/bin/timedatectl, /usr/bin/systemctl restart systemd-timesyncd, /usr/bin/nmcli, /usr/bin/apt-get, /usr/bin/systemctl restart tremplin, /usr/sbin/reboot
+$USER ALL=(ALL) NOPASSWD: /usr/bin/timedatectl, /usr/bin/systemctl restart systemd-timesyncd, /usr/bin/nmcli, /usr/bin/apt-get, /usr/bin/systemctl restart tremplin, /usr/sbin/reboot, $INSTALL_DIR/scripts/rtc_setup.sh *
 EOF
     sudo chmod 0440 "$SUDOERS_FILE"
     info "Sudoers rules written to $SUDOERS_FILE"
@@ -473,6 +473,15 @@ EOF
 
     section "Network — Pi #1"
     configure_static_ip "$SERVER_IP"
+
+    section "Real-time clock (Adafruit PiRTC DS3231)"
+    echo "Adds a hardware clock so the Pi keeps accurate time without network access."
+    if confirm "Install Adafruit PiRTC (DS3231) support now?"; then
+        sudo bash "$INSTALL_DIR/scripts/rtc_setup.sh" enable
+        info "RTC configured — will become active after reboot."
+    else
+        info "Skipping RTC setup — can be installed later from Settings → Clock."
+    fi
 
     section "Done — Pi #1 (server)"
     echo

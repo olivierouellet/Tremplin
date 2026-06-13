@@ -344,6 +344,24 @@ function onPasswordInput(form) {
                 </div>
                 <div id="time-set-status" style="margin-top:6px; font-size:0.85em;"></div>
 
+                <hr style="margin:8px 0;">
+
+                <div style="font-size:0.9em; font-weight:bold; margin-bottom:4px;">Real-Time Clock (Adafruit PiRTC DS3231)</div>
+                <p style="font-size:0.85em; color:#888; margin:0 0 8px;">
+                    Keeps accurate time without a network connection.
+                    <a href="https://learn.adafruit.com/adding-a-real-time-clock-to-raspberry-pi" target="_blank" rel="noopener">Setup guide</a>
+                </p>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                    <span id="rtc-status" style="font-size:0.9em; flex:1; color:#888;">—</span>
+                    <button id="btn-rtc-install" class="btn btn-default btn-xs" onclick="startRtcInstall()">Install</button>
+                    <button id="btn-rtc-remove" class="btn btn-default btn-xs" onclick="startRtcRemove()">Remove</button>
+                </div>
+                <pre id="rtc-output" style="display:none; background:#1a1a1a; color:#e0e0e0; padding:8px 12px; border-radius:3px; min-height:80px; max-height:240px; overflow-y:auto; font-size:0.8em; margin:0 0 8px;"></pre>
+                <div id="rtc-reboot-row" style="display:none; align-items:center; gap:8px;">
+                    <button class="btn btn-warning btn-xs" onclick="rtcReboot()">Reboot Now</button>
+                    <span style="font-size:0.85em; color:#888;">Reboot required to apply changes.</span>
+                </div>
+
             </div>
         </div></div>
         </div>
@@ -1162,7 +1180,7 @@ function onPasswordInput(form) {
             },
             '#tab-network': function(){ _netTabActive(); loadClients(); },
             '#tab-netgroup':  function() { _netTabActive(); loadClients(); },
-            '#tab-time':    function(){ _loadTimeStatus(); },
+            '#tab-time':    function(){ _loadTimeStatus(); _loadRtcStatus(); },
             '#tab-update':  function(){ loadVersions(); },
             '#tab-debug':   function(){ _loadXterm && _loadXterm(function(){}); fetch('/debug_status').then(function(r){return r.json();}).then(function(d){_applyDebugState(d.enabled);}); },
         };
@@ -1875,8 +1893,92 @@ function onPasswordInput(form) {
 
     document.querySelectorAll('.nav-tabs a').forEach(function(link) {
         if (link.getAttribute('href') === '#tab-time')
-            link.addEventListener('click', _loadTimeStatus);
+            link.addEventListener('click', function() { _loadTimeStatus(); _loadRtcStatus(); });
     });
+
+    // ── RTC (Adafruit PiRTC DS3231) ─────────────────────────────────────────────
+    function _loadRtcStatus() {
+        var el = document.getElementById('rtc-status');
+        fetch('/rtc_status').then(function(r){ return r.json(); }).then(function(d){
+            if (d.active) {
+                el.style.color = '#5a5';
+                el.textContent = '● RTC active (DS3231 detected)';
+            } else if (d.configured) {
+                el.style.color = '#888';
+                el.textContent = '○ Configured — reboot required to activate';
+            } else {
+                el.style.color = '#888';
+                el.textContent = '○ Not installed';
+            }
+        }).catch(function(){});
+    }
+
+    function _runRtc(action, startUrl) {
+        var btnInstall = document.getElementById('btn-rtc-install');
+        var btnRemove  = document.getElementById('btn-rtc-remove');
+        var out        = document.getElementById('rtc-output');
+        var status     = document.getElementById('rtc-status');
+        var rebootRow  = document.getElementById('rtc-reboot-row');
+        btnInstall.disabled = true;
+        btnRemove.disabled  = true;
+        rebootRow.style.display = 'none';
+        out.innerHTML = '';
+        out.style.display = 'block';
+        status.style.color = '#888';
+        status.textContent = 'Running…';
+        var seen = 0;
+        var poll = setInterval(function() {
+            fetch('/rtc_log').then(function(r){ return r.json(); }).then(function(d) {
+                for (var i = seen; i < d.lines.length; i++) {
+                    var span = document.createElement('span');
+                    span.textContent = d.lines[i].text;
+                    if (d.lines[i].error) span.style.color = '#f88';
+                    out.appendChild(span);
+                }
+                seen = d.lines.length;
+                out.scrollTop = out.scrollHeight;
+                if (d.done !== null) {
+                    clearInterval(poll);
+                    btnInstall.disabled = false;
+                    btnRemove.disabled  = false;
+                    if (d.done) {
+                        status.style.color = '#5a5';
+                        status.textContent = 'Done.';
+                        rebootRow.style.display = 'flex';
+                    } else {
+                        status.style.color = '#c55';
+                        status.textContent = 'Failed — see output above.';
+                    }
+                }
+            }).catch(function(){});
+        }, 500);
+        fetch(startUrl, {method: 'POST'}).then(function(r) {
+            if (!r.ok) {
+                clearInterval(poll);
+                status.style.color = '#c55';
+                status.textContent = 'Could not start.';
+                btnInstall.disabled = false;
+                btnRemove.disabled  = false;
+            }
+        }).catch(function(e) {
+            clearInterval(poll);
+            status.style.color = '#c55';
+            status.textContent = 'Request failed: ' + e;
+            btnInstall.disabled = false;
+            btnRemove.disabled  = false;
+        });
+    }
+
+    function startRtcInstall() { _runRtc('enable', '/rtc_install_start'); }
+    function startRtcRemove()  { _runRtc('disable', '/rtc_remove_start'); }
+
+    function rtcReboot() {
+        var status = document.getElementById('rtc-status');
+        document.getElementById('rtc-reboot-row').style.display = 'none';
+        status.style.color = '#888';
+        status.textContent = 'Rebooting…';
+        fetch('/system_reboot', {method: 'POST'});
+    }
 
     // ── Terminal tab ─────────────────────────────────────────────────────────
     var _term = null;

@@ -229,6 +229,89 @@ def route_os_update_log():
     return flask.jsonify({'lines': state._os_update_log_lines, 'done': state._os_update_log_done})
 
 
+# ── RTC (Adafruit PiRTC DS3231) ──────────────────────────────────────────────────
+
+_RTC_SCRIPT = os.path.join(state.app_dir, 'scripts', 'rtc_setup.sh')
+
+
+@bp.route('/rtc_status')
+@flask_login.login_required
+def route_rtc_status():
+    configured = False
+    active     = False
+    try:
+        r = subprocess.run(['sudo', 'bash', _RTC_SCRIPT, 'status'],
+                           capture_output=True, text=True, timeout=10)
+        for line in r.stdout.splitlines():
+            if line.strip() == 'configured=yes':
+                configured = True
+            elif line.strip() == 'active=yes':
+                active = True
+    except Exception:
+        pass
+    return flask.jsonify({'configured': configured, 'active': active})
+
+
+def _run_rtc(action):
+    state._rtc_log_lines = []
+    state._rtc_log_done  = None
+
+    def emit(text, error=False):
+        state._rtc_log_lines.append({'text': text, 'error': error})
+
+    try:
+        emit(f'$ sudo bash scripts/rtc_setup.sh {action}\n')
+        out, rc = _run_cmd_blocking(['sudo', 'bash', _RTC_SCRIPT, action])
+        if out:
+            emit(out)
+        if rc != 0:
+            emit(f'\nCommand failed (exit code {rc})\n', error=True)
+            state._rtc_log_done = False
+            return
+        state._rtc_log_done = True
+    except Exception as e:
+        emit(f'\nError: {e}\n', error=True)
+        state._rtc_log_done = False
+    finally:
+        state._rtc_in_progress = False
+
+
+@bp.route('/rtc_install_start', methods=['POST'])
+@flask_login.login_required
+def route_rtc_install_start():
+    if state._rtc_in_progress:
+        return flask.jsonify({'error': 'RTC setup already in progress'}), 409
+    state._rtc_in_progress = True
+    socketio.start_background_task(_run_rtc, 'enable')
+    return flask.jsonify({'ok': True})
+
+
+@bp.route('/rtc_remove_start', methods=['POST'])
+@flask_login.login_required
+def route_rtc_remove_start():
+    if state._rtc_in_progress:
+        return flask.jsonify({'error': 'RTC setup already in progress'}), 409
+    state._rtc_in_progress = True
+    socketio.start_background_task(_run_rtc, 'disable')
+    return flask.jsonify({'ok': True})
+
+
+@bp.route('/rtc_log')
+@flask_login.login_required
+def route_rtc_log():
+    return flask.jsonify({'lines': state._rtc_log_lines, 'done': state._rtc_log_done})
+
+
+@bp.route('/system_reboot', methods=['POST'])
+@flask_login.login_required
+def route_system_reboot():
+    def _reboot():
+        socketio.sleep(1)
+        subprocess.run(['sudo', 'reboot'])
+    socketio.start_background_task(_reboot)
+    return flask.jsonify({'ok': True})
+
+
 @bp.route('/backup_download')
 @flask_login.login_required
 def route_backup_download():
