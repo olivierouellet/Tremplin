@@ -37,7 +37,7 @@ The script:
 
 ## Pi #2 — Kiosk
 
-Flash **Raspberry Pi OS Trixie** with SSH enabled.
+Flash **Raspberry Pi OS Trixie — Desktop** (not Lite — Chromium needs a desktop session) with SSH enabled.
 
 SSH in and run:
 
@@ -45,7 +45,7 @@ SSH in and run:
 curl -fsSL https://raw.githubusercontent.com/olivierouellet/Tremplin/master/install.sh -o install.sh && bash install.sh kiosk
 ```
 
-The script configures Chromium to open fullscreen on boot pointing at `http://tremplin.local`.
+The script enables desktop autologin and configures Chromium to open fullscreen on boot pointing at `http://tremplin.local`.
 
 > Pi #1 must be running and reachable before the kiosk boots.
 

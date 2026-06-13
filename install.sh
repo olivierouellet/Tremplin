@@ -504,16 +504,37 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════════
 if [[ "$ROLE" == "kiosk" ]]; then
 
+    section "Desktop autologin"
+    if command -v raspi-config &>/dev/null; then
+        sudo raspi-config nonint do_boot_behaviour B4
+        info "Desktop autologin enabled — kiosk will boot straight to Chromium."
+    else
+        warn "raspi-config not found — enable manually via: sudo raspi-config → System Options → Boot / Auto Login → Desktop Autologin"
+    fi
+
     section "Chromium kiosk autostart"
+    CHROMIUM_BIN="chromium-browser"
+    command -v chromium-browser &>/dev/null || CHROMIUM_BIN="chromium"
+    KIOSK_CMD="$CHROMIUM_BIN --kiosk --app=$SCOREBOARD_URL --noerrdialogs --disable-infobars"
+
+    # Raspberry Pi OS Bookworm/Trixie — Wayland session via labwc
+    LABWC_AUTOSTART="$HOME/.config/labwc/autostart"
+    mkdir -p "$(dirname "$LABWC_AUTOSTART")"
+    touch "$LABWC_AUTOSTART"
+    if ! grep -q "# Tremplin kiosk" "$LABWC_AUTOSTART"; then
+        printf '\n# Tremplin kiosk\n%s &\n' "$KIOSK_CMD" >> "$LABWC_AUTOSTART"
+    fi
+
+    # Older Raspberry Pi OS releases — LXDE / X11 session
     AUTOSTART_DIR=/etc/xdg/lxsession/LXDE-pi
     sudo mkdir -p "$AUTOSTART_DIR"
     sudo tee "$AUTOSTART_DIR/autostart" > /dev/null <<EOF
 @xset s off
 @xset -dpms
 @xset s noblank
-@chromium-browser --kiosk --app=$SCOREBOARD_URL --noerrdialogs --disable-infobars
+@$KIOSK_CMD
 EOF
-    info "Kiosk autostart configured → $SCOREBOARD_URL"
+    info "Kiosk autostart configured ($CHROMIUM_BIN) → $SCOREBOARD_URL"
 
     section "VNC remote access"
     sudo apt-get install -y realvnc-vnc-server
