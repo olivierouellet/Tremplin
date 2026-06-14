@@ -122,6 +122,10 @@ def _run_update(target=None):
             state._update_log_done = False
             return
 
+        # uv sync rewrites uv.lock locally; discard that drift so it
+        # doesn't block the checkout/pull below.
+        _run_cmd_blocking(['git', 'checkout', '--', 'uv.lock'], cwd=state.app_dir)
+
         if not target:
             cmds  = [['git', 'checkout', 'master'], ['git', 'pull'], [_UV, 'sync']]
             label = 'Updated to latest'
