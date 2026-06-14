@@ -1610,7 +1610,7 @@ function onPasswordInput(form) {
 
     // Load network status when the Network tab is clicked
     document.querySelectorAll('.nav-tabs a').forEach(function(link) {
-        if (link.getAttribute('href') === '#tab-network')
+        if (link.getAttribute('href') === '#tab-network' || link.getAttribute('href') === '#tab-netgroup')
             link.addEventListener('click', function() { _netTabActive(); loadClients(); });
     });
 
