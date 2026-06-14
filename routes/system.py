@@ -239,16 +239,24 @@ _RTC_SCRIPT = os.path.join(state.app_dir, 'scripts', 'rtc_setup.sh')
 def route_rtc_status():
     configured = False
     active     = False
+
+    for config_txt in ('/boot/firmware/config.txt', '/boot/config.txt'):
+        try:
+            with open(config_txt) as f:
+                if any(line.strip() == 'dtoverlay=i2c-rtc,ds3231' for line in f):
+                    configured = True
+                    break
+        except OSError:
+            continue
+
     try:
-        r = subprocess.run(['sudo', 'bash', _RTC_SCRIPT, 'status'],
-                           capture_output=True, text=True, timeout=10)
-        for line in r.stdout.splitlines():
-            if line.strip() == 'configured=yes':
-                configured = True
-            elif line.strip() == 'active=yes':
-                active = True
-    except Exception:
+        with open('/sys/class/rtc/rtc0/name') as f:
+            name = f.read().lower()
+        if 'ds3231' in name or 'rtc-ds1307' in name:
+            active = True
+    except OSError:
         pass
+
     return flask.jsonify({'configured': configured, 'active': active})
 
 
