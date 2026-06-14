@@ -442,6 +442,19 @@ EOF
 
     section "mDNS aliases"
     sudo apt-get install -y avahi-utils
+
+    # Stop avahi from publishing IPv6 link-local (fe80::) records. On a
+    # multihomed/WiFi Pi, browsers resolving tremplin.local may prefer the
+    # AAAA link-local address, which is unroutable without a zone index, so the
+    # page fails to load even though IPv4 works fine.
+    # See docs/troubleshooting-tremplin-local-unreachable.md
+    if grep -q '^#*use-ipv6=' /etc/avahi/avahi-daemon.conf; then
+        sudo sed -i 's/^#*use-ipv6=.*/use-ipv6=no/' /etc/avahi/avahi-daemon.conf
+    else
+        sudo sed -i '/^\[server\]/a use-ipv6=no' /etc/avahi/avahi-daemon.conf
+    fi
+    sudo systemctl restart avahi-daemon
+
     MDNS_IP="${SERVER_IP%/*}"
     AVAHI_EXEC=""
     for _alias in $MDNS_ALIASES; do
