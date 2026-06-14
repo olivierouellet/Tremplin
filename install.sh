@@ -447,12 +447,19 @@ EOF
     # multihomed/WiFi Pi, browsers resolving tremplin.local may prefer the
     # AAAA link-local address, which is unroutable without a zone index, so the
     # page fails to load even though IPv4 works fine.
+    #   - use-ipv6=no            disables the IPv6 mDNS transport
+    #   - publish-aaaa-on-ipv4=no stops the AAAA record being announced over
+    #     IPv4 (this one defaults to YES and is the actual culprit)
     # See docs/troubleshooting-tremplin-local-unreachable.md
-    if grep -q '^#*use-ipv6=' /etc/avahi/avahi-daemon.conf; then
-        sudo sed -i 's/^#*use-ipv6=.*/use-ipv6=no/' /etc/avahi/avahi-daemon.conf
-    else
-        sudo sed -i '/^\[server\]/a use-ipv6=no' /etc/avahi/avahi-daemon.conf
-    fi
+    _avahi_set() {  # _avahi_set <key> <value> <section>
+        if grep -q "^#*[[:space:]]*$1=" /etc/avahi/avahi-daemon.conf; then
+            sudo sed -i "s/^#*[[:space:]]*$1=.*/$1=$2/" /etc/avahi/avahi-daemon.conf
+        else
+            sudo sed -i "/^\[$3\]/a $1=$2" /etc/avahi/avahi-daemon.conf
+        fi
+    }
+    _avahi_set use-ipv6 no server
+    _avahi_set publish-aaaa-on-ipv4 no publish
     sudo systemctl restart avahi-daemon
 
     MDNS_IP="${SERVER_IP%/*}"
