@@ -140,6 +140,13 @@ def route_wifi_connect():
     if not ssid:
         return flask.jsonify({'error': 'No SSID provided'}), 400
     try:
+        # Remove any stale connection profile for this SSID first. nmcli
+        # otherwise reuses an existing profile (e.g. from a previous attempt
+        # on an open network) that lacks 802-11-wireless-security.key-mgmt,
+        # which then fails validation once a password is supplied.
+        subprocess.run(['sudo', 'nmcli', 'connection', 'delete', ssid],
+                       capture_output=True, timeout=8)
+
         cmd = ['dev', 'wifi', 'connect', ssid]
         if password:
             cmd += ['password', password]
