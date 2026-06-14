@@ -159,12 +159,12 @@ html, body {
     color: var(--color-header-label);
 }
 
-/* Cap header sizes on tall viewports so digits fit in the 65px bar */
+/* Grow the header bar on tall viewports so the Event/Heat digits can
+   match the clock's height without cropping the label above them. */
 @media (min-height: 700px) {
+    .timing-header-bar   { height: 85px; }
     .header_cell         { padding: 6px 2vw; }
     .header_label        { font-size: 12px; }
-    #current_event,
-    #current_heat        { font-size: 28px; }
 }
 
 /* ── Scoreboard table — fills remaining height ────────────────────────────── */
