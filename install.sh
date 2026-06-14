@@ -28,6 +28,20 @@ error()   { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 section() { echo -e "\n${BOLD}──── $* ────${NC}"; }
 confirm() { read -rp "$1 [y/N] " _r; [[ "${_r:-}" =~ ^[Yy]$ ]]; }
 
+# Some networks (corporate/intranet proxies) intercept plain HTTP and return a
+# fake 404 for apt's Release files, breaking `apt-get update`. Switching the apt
+# sources to HTTPS sidesteps that, and is harmless on networks without a proxy.
+# See docs/troubleshooting-apt-http-proxy.md
+ensure_https_apt_sources() {
+    sudo sed -i \
+        -e 's|http://deb.debian.org|https://deb.debian.org|g' \
+        -e 's|http://archive.raspberrypi.com|https://archive.raspberrypi.com|g' \
+        -e 's|http://security.debian.org|https://security.debian.org|g' \
+        /etc/apt/sources.list \
+        /etc/apt/sources.list.d/*.list \
+        /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+}
+
 # ── Role selection ─────────────────────────────────────────────────────────────
 ROLE="${1:-}"
 if [[ -z "$ROLE" ]]; then
@@ -72,6 +86,7 @@ fi
 
 # ── System packages ────────────────────────────────────────────────────────────
 section "System packages"
+ensure_https_apt_sources
 sudo apt-get update -qq
 sudo apt-get upgrade -y
 sudo apt-get install -y git curl ufw
@@ -672,6 +687,7 @@ if [[ "$ROLE" == "cloud" ]]; then
     # ──────────────────────────────────────────────────────────────────────────
 
     section "System packages"
+    ensure_https_apt_sources
     sudo apt-get update -qq
     sudo apt-get upgrade -y
     sudo apt-get install -y git curl fail2ban unattended-upgrades
