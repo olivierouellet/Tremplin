@@ -324,6 +324,16 @@ def route_system_reboot():
     return flask.jsonify({'ok': True})
 
 
+@bp.route('/system_shutdown', methods=['POST'])
+@flask_login.login_required
+def route_system_shutdown():
+    def _shutdown():
+        socketio.sleep(1)
+        subprocess.run(['sudo', 'poweroff'])
+    socketio.start_background_task(_shutdown)
+    return flask.jsonify({'ok': True})
+
+
 @bp.route('/backup_download')
 @flask_login.login_required
 def route_backup_download():

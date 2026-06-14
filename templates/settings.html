@@ -159,7 +159,10 @@ function onPasswordInput(form) {
 <div class="container">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <h2 style="margin:0;">Tremplin — Settings</h2>
-        <div style="display:flex; gap:8px;">
+        <div style="display:flex; gap:8px; align-items:center;">
+            <span id="system-power-status" style="font-size:0.85em; color:#888;"></span>
+            <button type="button" class="btn btn-warning btn-sm" onclick="systemReboot()">Reboot</button>
+            <button type="button" class="btn btn-danger btn-sm" onclick="systemShutdown()">Shutdown</button>
             <a href="/help" class="btn btn-default btn-sm">Help</a>
             <a href="/info" class="btn btn-default btn-sm">Info</a>
             <form action="/logout" style="margin:0;">
@@ -1978,6 +1981,19 @@ function onPasswordInput(form) {
         status.style.color = '#888';
         status.textContent = 'Rebooting…';
         fetch('/system_reboot', {method: 'POST'});
+    }
+
+    // ── System power ─────────────────────────────────────────────────────────
+    function systemReboot() {
+        if (!confirm('Reboot the Pi now?')) return;
+        document.getElementById('system-power-status').textContent = 'Rebooting…';
+        fetch('/system_reboot', {method: 'POST'});
+    }
+
+    function systemShutdown() {
+        if (!confirm('Shut down the Pi now?\n\nYou will need to physically power-cycle it (or use a smart plug) to turn it back on.')) return;
+        document.getElementById('system-power-status').textContent = 'Shutting down…';
+        fetch('/system_shutdown', {method: 'POST'});
     }
 
     // ── Terminal tab ─────────────────────────────────────────────────────────

@@ -185,7 +185,7 @@ if [[ "$ROLE" == "server" ]]; then
     section "Sudo permissions"
     SUDOERS_FILE="/etc/sudoers.d/tremplin"
     sudo tee "$SUDOERS_FILE" > /dev/null <<EOF
-$USER ALL=(ALL) NOPASSWD: /usr/bin/timedatectl, /usr/bin/systemctl restart systemd-timesyncd, /usr/bin/nmcli, /usr/bin/apt-get, /usr/bin/systemctl restart tremplin, /usr/sbin/reboot, $INSTALL_DIR/scripts/rtc_setup.sh *
+$USER ALL=(ALL) NOPASSWD: /usr/bin/timedatectl, /usr/bin/systemctl restart systemd-timesyncd, /usr/bin/nmcli, /usr/bin/apt-get, /usr/bin/systemctl restart tremplin, /usr/sbin/reboot, /usr/sbin/poweroff, $INSTALL_DIR/scripts/rtc_setup.sh *
 EOF
     sudo chmod 0440 "$SUDOERS_FILE"
     info "Sudoers rules written to $SUDOERS_FILE"
