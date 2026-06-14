@@ -534,7 +534,7 @@ EOF
     section "Chromium kiosk autostart"
     CHROMIUM_BIN="chromium-browser"
     command -v chromium-browser &>/dev/null || CHROMIUM_BIN="chromium"
-    KIOSK_CMD="$CHROMIUM_BIN --kiosk --app=$SCOREBOARD_URL --noerrdialogs --disable-infobars"
+    KIOSK_CMD="$CHROMIUM_BIN --kiosk --app=$SCOREBOARD_URL --noerrdialogs --disable-infobars --password-store=basic"
 
     # Raspberry Pi OS Bookworm/Trixie — Wayland session via labwc
     LABWC_AUTOSTART="$HOME/.config/labwc/autostart"
