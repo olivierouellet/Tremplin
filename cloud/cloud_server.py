@@ -21,6 +21,7 @@ import flask_socketio
 DATA_DIR    = os.environ.get('DATA_DIR', '/data')
 KEYS_FILE   = os.path.join(DATA_DIR, 'keys.json')
 CREDS_FILE  = os.path.join(DATA_DIR, 'credentials.json')
+MEETS_FILE  = os.path.join(DATA_DIR, 'meets.json')
 LOCALES_DIR = os.path.join(os.path.dirname(__file__), 'locales')
 
 _locale_cache = {}
@@ -75,13 +76,99 @@ socketio = flask_socketio.SocketIO(app, async_mode='gevent', cors_allowed_origin
 
 # ── Per-meet state ─────────────────────────────────────────────────────────────
 # _meets: meet_id -> {
-#   relay_key, relay_sid, organizer, name, location, sport,
+#   relay_key, relay_sid, organizer, name, location, sport, meet_date,
 #   settings, connected_at,
 #   last_scoreboard, last_results, last_next_heats, schedule_data
 # }
+# _retained: meet_id -> persisted snapshot that outlives the relay connection, so
+#   a meet keeps showing (schedule, picker image, icon) after the console
+#   disconnects, until it expires. Persisted to MEETS_FILE. Fields:
+#   organizer, relay_key, name, location, sport, app_window_title, meet_date,
+#   settings, schedule_data, last_seen (iso), expires_at (iso or None while live).
 _meets      = {}
 _relay_sids = {}   # relay_sid -> meet_id
 _lock       = threading.Lock()
+
+# Fields copied from a live meet into its retained snapshot.
+_RETAINED_FIELDS = ('organizer', 'relay_key', 'name', 'location', 'sport',
+                    'app_window_title', 'meet_date', 'settings', 'schedule_data')
+
+
+# ── Retained meets (persistence) ───────────────────────────────────────────────
+
+def _load_retained():
+    try:
+        with open(MEETS_FILE) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+_retained = _load_retained()
+
+
+def _save_retained():
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(MEETS_FILE, 'w') as f:
+        json.dump(_retained, f, indent=2)
+
+
+def _persist_meet(meet_id, meet):
+    """Write-through a live meet into the retained store. Caller holds _lock."""
+    snap = _retained.get(meet_id, {})
+    snap.update({k: meet.get(k) for k in _RETAINED_FIELDS})
+    snap['last_seen']   = datetime.datetime.now().isoformat(timespec='seconds')
+    snap['expires_at']  = None   # live — never expires while connected
+    _retained[meet_id] = snap
+    _save_retained()
+
+
+def _compute_expiry(meet_date, when=None):
+    """Midnight after the final session date, or after `when` if no meet date."""
+    when = when or datetime.datetime.now()
+    base = None
+    if meet_date:
+        try:
+            base = datetime.date.fromisoformat(meet_date)
+        except ValueError:
+            base = None
+    if base is None:
+        base = when.date()
+    return datetime.datetime.combine(base, datetime.time.min) + datetime.timedelta(days=1)
+
+
+def _sweep_expired():
+    """Drop retained meets past their expiry. Live meets are never swept."""
+    now     = datetime.datetime.now()
+    removed = False
+    with _lock:
+        for meet_id in list(_retained):
+            if meet_id in _meets:
+                continue  # still connected — keep visible regardless of expiry
+            exp = _retained[meet_id].get('expires_at')
+            if exp and datetime.datetime.fromisoformat(exp) <= now:
+                del _retained[meet_id]
+                removed = True
+        if removed:
+            _save_retained()
+
+
+def _get_meet(meet_id):
+    """Live meet if connected, else its retained snapshot, else None.
+
+    Caller holds _lock.
+    """
+    return _meets.get(meet_id) or _retained.get(meet_id)
+
+
+def _merged_meets():
+    """meet_id -> meet dict for all live + retained meets, live preferred.
+
+    Caller holds _lock.
+    """
+    merged = dict(_retained)
+    merged.update(_meets)
+    return merged
 
 
 # ── Key management ─────────────────────────────────────────────────────────────
@@ -142,6 +229,36 @@ def _picker_appearance():
     }
 
 
+def _admin_meet_list():
+    """Merged live + retained meets for the admin table, live first."""
+    out = []
+    with _lock:
+        for mid, m in _merged_meets().items():
+            live = mid in _meets
+            exp  = None if live else _retained.get(mid, {}).get('expires_at')
+            disp = ''
+            if exp:
+                try:
+                    disp = datetime.datetime.fromisoformat(exp).strftime('%Y-%m-%d %H:%M')
+                except ValueError:
+                    disp = exp
+            out.append({
+                'id':              mid,
+                'name':            m.get('name', ''),
+                'location':        m.get('location', ''),
+                'sport':           m.get('sport', ''),
+                'organizer':       m.get('organizer', ''),
+                'connected_at':    m.get('connected_at', ''),
+                'language':        _locale_name(_meet_lang(m)),
+                'live':            live,
+                'expires_at':      exp,
+                'expires_display': disp,
+                'expires_input':   (exp or '')[:16],   # for <input type=datetime-local>
+            })
+    out.sort(key=lambda x: (not x['live'], (x['name'] or '').lower()))
+    return out
+
+
 def _check_admin():
     auth = flask.request.authorization
     if not auth:
@@ -164,11 +281,13 @@ def _require_admin():
 
 @app.route('/')
 def route_index():
+    _sweep_expired()
     with _lock:
         meets = [{'id': mid, 'name': m['name'], 'location': m['location'],
                   'sport': m['sport'], 'organizer': m['organizer'],
+                  'offline': mid not in _meets,
                   'has_picker_image': bool(m.get('settings', {}).get('picker_image_b64', ''))}
-                 for mid, m in _meets.items()]
+                 for mid, m in _merged_meets().items()]
     creds     = _load_creds()
     raw_title = creds.get('picker_title')
     raw_wt    = creds.get('picker_window_title')
@@ -183,7 +302,7 @@ def route_index():
 def route_mobile():
     meet_id = flask.request.args.get('meet', '')
     with _lock:
-        meet = _meets.get(meet_id)
+        meet = _get_meet(meet_id)
     if not meet:
         return flask.redirect(flask.url_for('route_index'))
     return flask.render_template('mobile.html',
@@ -199,7 +318,7 @@ def route_mobile():
 def route_live():
     meet_id = flask.request.args.get('meet', '')
     with _lock:
-        meet = _meets.get(meet_id)
+        meet = _get_meet(meet_id)
     if not meet:
         return flask.render_template('offline.html')
     s = meet.get('settings', {})
@@ -227,7 +346,7 @@ def route_live():
 def route_results():
     meet_id = flask.request.args.get('meet', '')
     with _lock:
-        meet = _meets.get(meet_id)
+        meet = _get_meet(meet_id)
     if not meet:
         return flask.render_template('offline.html')
     s = meet.get('settings', {})
@@ -286,7 +405,7 @@ def _build_heats_json(sched):
 def route_schedule():
     meet_id = flask.request.args.get('meet', '')
     with _lock:
-        meet = _meets.get(meet_id)
+        meet = _get_meet(meet_id)
     if not meet:
         return flask.render_template('offline.html')
     s     = meet.get('settings', {})
@@ -315,7 +434,7 @@ def route_search_suggestions():
     if not q:
         return flask.jsonify([])
     with _lock:
-        meet = _meets.get(meet_id)
+        meet = _get_meet(meet_id)
     if not meet:
         return flask.jsonify([])
     start_list = meet.get('schedule_data', {}).get('start_list', {})
@@ -356,7 +475,7 @@ def route_ping():
 @app.route('/manifest/<meet_id>')
 def route_manifest(meet_id):
     with _lock:
-        meet = _meets.get(meet_id)
+        meet = _get_meet(meet_id)
     if not meet:
         flask.abort(404)
     has_icon = bool(meet.get('settings', {}).get('home_icon_b64'))
@@ -382,7 +501,7 @@ def route_manifest(meet_id):
 @app.route('/icon/<meet_id>')
 def route_icon(meet_id):
     with _lock:
-        meet = _meets.get(meet_id)
+        meet = _get_meet(meet_id)
     if not meet:
         flask.abort(404)
     icon_b64 = meet.get('settings', {}).get('home_icon_b64', '')
@@ -396,7 +515,7 @@ def route_icon(meet_id):
 @app.route('/picker_image/<meet_id>')
 def route_meet_picker_image(meet_id):
     with _lock:
-        meet = _meets.get(meet_id)
+        meet = _get_meet(meet_id)
     if not meet:
         flask.abort(404)
     img_b64 = meet.get('settings', {}).get('picker_image_b64', '')
@@ -500,6 +619,49 @@ def route_restore_keys():
                     creds[field] = appearance[field]
             _save_creds(creds)
         return flask.jsonify({'ok': True, 'count': len(keys)})
+    except (json.JSONDecodeError, ValueError) as e:
+        return flask.jsonify({'error': f'Invalid file: {e}'}), 400
+    except Exception as e:
+        return flask.jsonify({'error': str(e)}), 500
+
+
+@app.route('/admin/backup/meets')
+def route_backup_meets():
+    denied = _require_admin()
+    if denied:
+        return denied
+    with _lock:
+        meets = dict(_retained)
+    backup = {'version': 1, 'meets': meets}
+    return flask.Response(
+        json.dumps(backup, indent=2),
+        mimetype='application/json',
+        headers={'Content-Disposition': 'attachment; filename="tremplin-meets.json"'}
+    )
+
+
+@app.route('/admin/restore/meets', methods=['POST'])
+def route_restore_meets():
+    denied = _require_admin()
+    if denied:
+        return denied
+    uploaded = flask.request.files.get('meets_file')
+    if not uploaded:
+        return flask.jsonify({'error': 'No file provided'}), 400
+    try:
+        data = json.loads(uploaded.read())
+        if not isinstance(data, dict):
+            raise ValueError('expected a JSON object')
+        meets = data['meets'] if 'meets' in data else data
+        if not isinstance(meets, dict):
+            raise ValueError('invalid meets section')
+        with _lock:
+            # Replace retained snapshots. Live meets stay in _meets untouched and
+            # re-persist themselves on disconnect, so they're never lost.
+            _retained.clear()
+            _retained.update(meets)
+            _save_retained()
+        return flask.jsonify({'ok': True, 'count': len(meets)})
     except (json.JSONDecodeError, ValueError) as e:
         return flask.jsonify({'error': f'Invalid file: {e}'}), 400
     except Exception as e:
@@ -626,6 +788,23 @@ def route_admin():
             if key in keys:
                 del keys[key]
                 _save_keys(keys)
+        elif action == 'set_expiry':
+            meet_id = flask.request.form.get('meet_id', '')
+            raw     = flask.request.form.get('expires_at', '').strip()
+            with _lock:
+                if meet_id in _retained and meet_id not in _meets and raw:
+                    try:
+                        exp = datetime.datetime.fromisoformat(raw)
+                        _retained[meet_id]['expires_at'] = exp.isoformat(timespec='seconds')
+                        _save_retained()
+                    except ValueError:
+                        pass
+        elif action == 'delete_meet':
+            meet_id = flask.request.form.get('meet_id', '')
+            with _lock:
+                if meet_id in _retained and meet_id not in _meets:
+                    del _retained[meet_id]
+                    _save_retained()
         elif action == 'change_locale':
             locale = flask.request.form.get('locale', '')
             creds  = _load_creds()
@@ -655,13 +834,8 @@ def route_admin():
                     'Credentials updated — <a href="/admin">sign in with new credentials</a>',
                     401, {'WWW-Authenticate': 'Basic realm="Tremplin Admin"'}
                 )
-            with _lock:
-                active = [{'id': mid, 'name': m['name'], 'location': m['location'],
-                           'sport': m['sport'], 'organizer': m['organizer'],
-                           'connected_at': m['connected_at'],
-                           'language': _locale_name(_meet_lang(m))}
-                          for mid, m in _meets.items()]
-            return flask.render_template('admin.html', keys=keys, active_meets=active,
+            return flask.render_template('admin.html', keys=keys,
+                                         active_meets=_admin_meet_list(),
                                          t=t, creds_error=error,
                                          locales=_available_locales(),
                                          current_locale=_load_creds().get('locale', ''),
@@ -669,14 +843,9 @@ def route_admin():
                                          **_picker_appearance())
         return flask.redirect(flask.url_for('route_admin'))
 
-    with _lock:
-        active = [{'id': mid, 'name': m['name'], 'location': m['location'],
-                   'sport': m['sport'], 'organizer': m['organizer'],
-                   'connected_at': m['connected_at'],
-                   'language': _locale_name(_meet_lang(m))}
-                  for mid, m in _meets.items()]
-
-    return flask.render_template('admin.html', keys=keys, active_meets=active,
+    _sweep_expired()
+    return flask.render_template('admin.html', keys=keys,
+                                 active_meets=_admin_meet_list(),
                                  t=_load_cloud_strings(), creds_error=None,
                                  locales=_available_locales(),
                                  current_locale=_load_creds().get('locale', ''),
@@ -701,37 +870,38 @@ def on_relay_register(data):
                       namespace='/relay', to=flask.request.sid)
         return
 
+    # Stable meet id per key, so a reconnect reattaches to the same retained meet
+    # (and the same picker card) instead of spawning a duplicate.
+    meet_id = keys[key].get('meet_id')
+    if not meet_id:
+        meet_id = secrets.token_urlsafe(8)
+        keys[key]['meet_id'] = meet_id
+        _save_keys(keys)
+
     sid = flask.request.sid
     with _lock:
-        existing_id = _relay_sids.get(sid)
-        if existing_id and existing_id in _meets:
-            # Same socket re-registering (e.g. settings change) — update in place
-            meet_id = existing_id
-            _meets[meet_id].update({
-                'name':             data.get('name', ''),
-                'location':         data.get('location', ''),
-                'sport':            data.get('sport', ''),
-                'app_window_title': data.get('app_window_title', ''),
-                'settings':         data.get('settings', {}),
-            })
-        else:
-            meet_id = secrets.token_urlsafe(8)
-            _meets[meet_id] = {
-                'relay_key':        key,
-                'relay_sid':        sid,
-                'organizer':        keys[key]['organizer'],
-                'name':             data.get('name', ''),
-                'location':         data.get('location', ''),
-                'sport':            data.get('sport', ''),
-                'app_window_title': data.get('app_window_title', ''),
-                'settings':         data.get('settings', {}),
-                'connected_at':    datetime.datetime.now().strftime('%H:%M:%S'),
-                'last_scoreboard': {},
-                'last_results':    {},
-                'last_next_heats': {},
-                'schedule_data':   {},
-            }
-            _relay_sids[sid] = meet_id
+        prev = _meets.get(meet_id, {})          # already-live data (settings re-register)
+        snap = _retained.get(meet_id, {})        # persisted snapshot (fresh reconnect)
+        _meets[meet_id] = {
+            'relay_key':        key,
+            'relay_sid':        sid,
+            'organizer':        keys[key]['organizer'],
+            'name':             data.get('name', ''),
+            'location':         data.get('location', ''),
+            'sport':            data.get('sport', ''),
+            'app_window_title': data.get('app_window_title', ''),
+            'meet_date':        data.get('meet_date', ''),
+            'settings':         data.get('settings', {}),
+            'connected_at':     prev.get('connected_at') or datetime.datetime.now().strftime('%H:%M:%S'),
+            'last_scoreboard':  prev.get('last_scoreboard', {}),
+            'last_results':     prev.get('last_results', {}),
+            'last_next_heats':  prev.get('last_next_heats', {}),
+            # Restore the retained schedule on a fresh reconnect so it shows
+            # immediately, before the relay re-sends its schedule_snapshot.
+            'schedule_data':    prev.get('schedule_data') or snap.get('schedule_data', {}),
+        }
+        _relay_sids[sid] = meet_id
+        _persist_meet(meet_id, _meets[meet_id])
 
     socketio.emit('registered', {'meet_id': meet_id},
                   namespace='/relay', to=sid)
@@ -743,8 +913,17 @@ def on_relay_disconnect():
     sid = flask.request.sid
     with _lock:
         meet_id = _relay_sids.pop(sid, None)
-        if meet_id:
+        meet    = _meets.get(meet_id) if meet_id else None
+        # Guard against a reconnect race: only retire the meet if this socket is
+        # still the one bound to it (a newer socket may have re-registered).
+        if meet and meet.get('relay_sid') == sid:
             _meets.pop(meet_id, None)
+            snap = _retained.get(meet_id, {})
+            snap.update({k: meet.get(k) for k in _RETAINED_FIELDS})
+            snap['last_seen']  = datetime.datetime.now().isoformat(timespec='seconds')
+            snap['expires_at'] = _compute_expiry(meet.get('meet_date', '')).isoformat(timespec='seconds')
+            _retained[meet_id] = snap
+            _save_retained()
     if meet_id:
         print(f'[cloud] meet {meet_id} disconnected', flush=True)
 
@@ -770,6 +949,8 @@ def _forward(event, data):
         socketio.emit(event, data, room=f'meet:{meet_id}', namespace='/results')
     elif event == 'schedule_snapshot':
         meet['schedule_data'] = data
+        with _lock:
+            _persist_meet(meet_id, meet)
         socketio.emit('schedule_update', room=f'meet:{meet_id}', namespace='/schedule')
 
 
@@ -807,11 +988,11 @@ def on_scoreboard_connect():
 def on_scoreboard_join(data):
     meet_id = data.get('meet_id', '')
     with _lock:
-        meet = _meets.get(meet_id)
+        meet = _get_meet(meet_id)
     if not meet:
         return
     flask_socketio.join_room(f'meet:{meet_id}')
-    if meet['last_scoreboard']:
+    if meet.get('last_scoreboard'):
         socketio.emit('update_scoreboard', meet['last_scoreboard'],
                       namespace='/scoreboard', to=flask.request.sid)
 
@@ -827,14 +1008,14 @@ def on_results_connect():
 def on_results_join(data):
     meet_id = data.get('meet_id', '')
     with _lock:
-        meet = _meets.get(meet_id)
+        meet = _get_meet(meet_id)
     if not meet:
         return
     flask_socketio.join_room(f'meet:{meet_id}')
-    if meet['last_results']:
+    if meet.get('last_results'):
         socketio.emit('results_snapshot', meet['last_results'],
                       namespace='/results', to=flask.request.sid)
-    if meet['last_next_heats']:
+    if meet.get('last_next_heats'):
         socketio.emit('next_heats', meet['last_next_heats'],
                       namespace='/results', to=flask.request.sid)
 
@@ -850,7 +1031,7 @@ def on_schedule_connect():
 def on_schedule_join(data):
     meet_id = data.get('meet_id', '')
     with _lock:
-        meet = _meets.get(meet_id)
+        meet = _get_meet(meet_id)
     if not meet:
         return
     flask_socketio.join_room(f'meet:{meet_id}')

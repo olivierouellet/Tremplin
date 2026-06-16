@@ -17,6 +17,7 @@
         .badge-active   { background:#1a3a1a; color:#4CAF50; }
         .badge-inactive { background:#2a1a1a; color:#888; }
         .badge-live     { background:#1a2a3a; color:#5ab4e8; }
+        .badge-retained { background:#2a2618; color:#c9a84c; }
         form { display:inline; }
         button { background:none; border:1px solid #333; color:#aaa; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.8em; transition:border-color 0.15s,color 0.15s; }
         button:hover { border-color:#666; color:#fff; }
@@ -84,24 +85,42 @@
 
     <div class="tab-content">
 
-        <!-- ── Live Meets ── -->
+        <!-- ── Meets (live + retained) ── -->
         <div class="tab-pane active" id="tab-meets">
             <table>
-                <thead><tr><th>{{ t.col_meet }}</th><th>{{ t.col_location }}</th><th>{{ t.col_sport }}</th><th>{{ t.col_organizer }}</th><th>{{ t.col_language }}</th><th>{{ t.col_since }}</th></tr></thead>
+                <thead><tr><th>{{ t.col_meet }}</th><th>{{ t.col_location }}</th><th>{{ t.col_sport }}</th><th>{{ t.col_organizer }}</th><th>{{ t.col_language }}</th><th>{{ t.col_status or 'Status' }}</th><th></th></tr></thead>
                 <tbody>
                 {% if active_meets %}
                     {% for m in active_meets %}
                     <tr>
-                        <td>{{ m.name or '—' }} <span class="badge badge-live">{{ t.badge_live }}</span></td>
+                        <td>{{ m.name or '—' }}</td>
                         <td>{{ m.location or '—' }}</td>
                         <td>{{ m.sport or '—' }}</td>
                         <td>{{ m.organizer }}</td>
                         <td>{{ m.language or '—' }}</td>
-                        <td>{{ m.connected_at }}</td>
+                        {% if m.live %}
+                        <td><span class="badge badge-live">{{ t.badge_live }}</span><br><span style="font-size:0.78em;color:#666;">{{ t.col_since or 'since' }} {{ m.connected_at }}</span></td>
+                        <td></td>
+                        {% else %}
+                        <td><span class="badge badge-retained">{{ t.badge_retained or 'Offline' }}</span><br><span style="font-size:0.78em;color:#666;">{{ t.expires_label or 'until' }} {{ m.expires_display }}</span></td>
+                        <td style="white-space:nowrap;">
+                            <form method="post" style="display:inline-flex;gap:4px;align-items:center;">
+                                <input type="hidden" name="action" value="set_expiry">
+                                <input type="hidden" name="meet_id" value="{{ m.id }}">
+                                <input type="datetime-local" name="expires_at" value="{{ m.expires_input }}" style="font-size:0.82em;">
+                                <button type="submit">{{ t.set_expiry or 'Set' }}</button>
+                            </form>
+                            <form method="post" style="display:inline; margin-left:4px;" onsubmit="return confirm('{{ t.confirm_delete_meet or 'Remove this meet now?' }}');">
+                                <input type="hidden" name="action" value="delete_meet">
+                                <input type="hidden" name="meet_id" value="{{ m.id }}">
+                                <button type="submit" class="danger">{{ t.delete or 'Delete' }}</button>
+                            </form>
+                        </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 {% else %}
-                    <tr class="empty-row"><td colspan="6">{{ t.no_meets_admin }}</td></tr>
+                    <tr class="empty-row"><td colspan="7">{{ t.no_meets_admin }}</td></tr>
                 {% endif %}
                 </tbody>
             </table>
@@ -247,6 +266,19 @@
                             {{ t.get('restore_backup', 'Restore…') }}<input type="file" accept=".json" style="display:none;" onchange="restoreKeys(this)">
                         </label>
                         <span id="restore-status" style="font-size:0.85em;color:#666;"></span>
+                    </div>
+                </div>
+                <div class="panel-row" style="border-top:1px solid #222;margin-top:12px;padding-top:12px;">
+                    <span class="panel-label" style="color:#444;">{{ t.get('backup_meets', 'Meets') }}</span>
+                    <a id="backup-meets-btn" href="/admin/backup/meets" style="font-size:0.8em;border:1px solid #333;color:#aaa;padding:4px 10px;border-radius:4px;text-decoration:none;" onmouseover="this.style.color='#fff';this.style.borderColor='#666'" onmouseout="this.style.color='#aaa';this.style.borderColor='#333'">{{ t.get('download_backup', 'Download') }}</a>
+                </div>
+                <div class="panel-row" style="align-items:flex-start;flex-direction:column;gap:6px;">
+                    <span style="font-size:0.78em;color:#555;">{{ t.get('restore_meets_note', 'Restore retained meets (schedules, images, icons). This replaces all current retained meets; live meets are unaffected.') }}</span>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <label style="display:inline-block;font-size:0.8em;border:1px solid #333;color:#aaa;padding:4px 10px;border-radius:4px;cursor:pointer;" onmouseover="this.style.color='#fff';this.style.borderColor='#666'" onmouseout="this.style.color='#aaa';this.style.borderColor='#333'">
+                            {{ t.get('restore_backup', 'Restore…') }}<input type="file" accept=".json" style="display:none;" onchange="restoreMeets(this)">
+                        </label>
+                        <span id="restore-meets-status" style="font-size:0.85em;color:#666;"></span>
                     </div>
                 </div>
             </div>
@@ -486,6 +518,29 @@
                     if (d.ok) {
                         status.style.color = '#4a4';
                         status.textContent = d.count + ' key(s) restored.';
+                    } else {
+                        status.style.color = '#c55';
+                        status.textContent = 'Error: ' + d.error;
+                    }
+                    input.value = '';
+                })
+                .catch(() => { status.style.color = '#c55'; status.textContent = 'Upload failed.'; input.value = ''; });
+        }
+
+        function restoreMeets(input) {
+            const status = document.getElementById('restore-meets-status');
+            if (!input.files.length) return;
+            if (!confirm('This will replace all retained (offline) meets. Live meets are unaffected. Are you sure?')) {
+                input.value = ''; return;
+            }
+            status.style.color = '#888'; status.textContent = 'Uploading…';
+            const form = new FormData(); form.append('meets_file', input.files[0]);
+            fetch('/admin/restore/meets', { method: 'POST', body: form })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.ok) {
+                        status.style.color = '#4a4';
+                        status.textContent = d.count + ' meet(s) restored.';
                     } else {
                         status.style.color = '#c55';
                         status.textContent = 'Error: ' + d.error;

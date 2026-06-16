@@ -27,6 +27,7 @@ def _get_metadata():
         'location': state.lenex_meet_info.get('city')  or state.settings.get('meet_location', ''),
         'sport':    state.settings.get('meet_sport', ''),
         'app_window_title': state.settings.get('app_window_title', ''),
+        'meet_date': _last_session_date(),
         'settings': {
             'num_lanes':            int(state.settings.get('num_lanes', 8)),
             'show_podium':          state.settings.get('show_podium', True),
@@ -55,6 +56,17 @@ def _get_metadata():
     if picker_img:
         meta['settings']['picker_image_b64'] = picker_img
     return meta
+
+
+def _last_session_date():
+    """Latest session date from the loaded LENEX ('YYYY-MM-DD'), or '' if unknown.
+
+    LENEX dates are ISO-formatted, so a lexical max is also the chronological max.
+    The cloud uses this to expire a retained meet the day after its final session.
+    """
+    dates = [s.get('date', '') for s in state.lenex_meet_info.get('sessions', [])]
+    dates = [d for d in dates if d]
+    return max(dates) if dates else ''
 
 
 def _icon_b64():
