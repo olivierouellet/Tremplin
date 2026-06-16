@@ -58,10 +58,11 @@ def route_icon_delete():
                 if os.path.exists(p):
                     os.remove(p)
             state.settings['active_home_icon'] = ''
+            state.save_meet_profile(state._active_meet_uid)
             with open(state.settings_file, 'wt') as f:
                 json.dump(state.settings, f, sort_keys=True, indent=4)
             relay.update_metadata()
-    return flask.redirect('/settings#tab-cloud')
+    return flask.redirect('/settings#tab-meet')
 
 
 @bp.route('/icon_delete_all')
@@ -73,10 +74,11 @@ def route_icon_delete_all():
             if os.path.isfile(fp):
                 os.remove(fp)
     state.settings['active_home_icon'] = ''
+    state.save_meet_profile(state._active_meet_uid)
     with open(state.settings_file, 'wt') as f:
         json.dump(state.settings, f, sort_keys=True, indent=4)
     relay.update_metadata()
-    return flask.redirect('/settings#tab-cloud')
+    return flask.redirect('/settings#tab-meet')
 
 
 @bp.route('/locale_delete')
@@ -154,10 +156,11 @@ def route_picker_image_delete():
             os.remove(path)
         if state.settings.get('active_picker_image') == filename:
             state.settings['active_picker_image'] = ''
+            state.save_meet_profile(state._active_meet_uid)
             with open(state.settings_file, 'wt') as f:
                 json.dump(state.settings, f, sort_keys=True, indent=4)
             relay.update_metadata()
-    return flask.redirect('/settings#tab-cloud')
+    return flask.redirect('/settings#tab-meet')
 
 
 @bp.route('/picker_image_delete_all')
@@ -169,7 +172,8 @@ def route_picker_image_delete_all():
             if os.path.isfile(fp):
                 os.remove(fp)
     state.settings['active_picker_image'] = ''
+    state.save_meet_profile(state._active_meet_uid)
     with open(state.settings_file, 'wt') as f:
         json.dump(state.settings, f, sort_keys=True, indent=4)
     relay.update_metadata()
-    return flask.redirect('/settings#tab-cloud')
+    return flask.redirect('/settings#tab-meet')

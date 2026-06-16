@@ -28,6 +28,7 @@ def _get_metadata():
         'sport':    state.settings.get('meet_sport', ''),
         'app_window_title': state.settings.get('app_window_title', ''),
         'meet_date': _last_session_date(),
+        'meet_uid':  state.meet_uid(),
         'settings': {
             'num_lanes':            int(state.settings.get('num_lanes', 8)),
             'show_podium':          state.settings.get('show_podium', True),

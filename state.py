@@ -1,4 +1,5 @@
 import glob
+import hashlib
 import json
 import os
 import os.path
@@ -121,6 +122,9 @@ settings = {
     'touchpad_sides': 1,
     'carousel_interval': 10,
     'console_type': 'cts_gen6',
+    # Per-meet cloud appearance overrides, keyed by meet_uid(). See
+    # CLOUD_PROFILE_FIELDS / apply_meet_profile().
+    'meet_profiles': {},
 }
 
 # ── Meet data ──────────────────────────────────────────────────────────────────
@@ -131,6 +135,60 @@ lenex_start_list      = {}
 lenex_heat_times      = {}
 lenex_meet_info       = {}
 lenex_event_distances = {}
+
+# Cloud-appearance overrides that travel per meet (not Pi-global). Keyed by
+# meet_uid() in settings['meet_profiles']; the active values are mirrored into
+# settings so the relay metadata and the Meet tab read them directly.
+CLOUD_PROFILE_FIELDS = ('cloud_meet_title', 'meet_location', 'meet_sport',
+                        'app_window_title', 'cloud_label_style',
+                        'active_picker_image', 'active_home_icon')
+_PROFILE_DEFAULTS = {'cloud_label_style': 'short'}
+
+
+def _profile_field(f):
+    return settings.get(f, _PROFILE_DEFAULTS.get(f, ''))
+
+
+def meet_uid():
+    """Stable identifier for the currently loaded meet.
+
+    LENEX: a hash of the meet name plus its session dates — stable across
+    re-exports and distinct for each day of a meet split into separate files.
+    Otherwise (Hytek CSV, no sessions) falls back to the loaded file name.
+    Returns '' when nothing is loaded.
+    """
+    name  = lenex_meet_info.get('name', '')
+    dates = sorted(d for d in (s.get('date', '') for s in lenex_meet_info.get('sessions', [])) if d)
+    basis = (name + '|' + '|'.join(dates)).strip('|')
+    if not basis:
+        basis = _active_meet_file
+    if not basis:
+        return ''
+    return hashlib.sha1(basis.encode('utf-8')).hexdigest()[:12]
+
+
+def apply_meet_profile(uid):
+    """Load a meet's saved cloud-appearance overrides into the active settings.
+
+    A meet with no profile yet is seeded from the current values, so a freshly
+    loaded meet starts from what's already on screen (usually only the title
+    needs changing). Returns the active_home_icon so the caller can re-render it.
+    """
+    profiles = settings.setdefault('meet_profiles', {})
+    if uid and uid in profiles:
+        for f in CLOUD_PROFILE_FIELDS:
+            settings[f] = profiles[uid].get(f, _PROFILE_DEFAULTS.get(f, ''))
+    elif uid:
+        profiles[uid] = {f: _profile_field(f) for f in CLOUD_PROFILE_FIELDS}
+    return settings.get('active_home_icon', '')
+
+
+def save_meet_profile(uid):
+    """Persist the active cloud-appearance overrides into the meet's profile."""
+    if not uid:
+        return
+    profiles = settings.setdefault('meet_profiles', {})
+    profiles[uid] = {f: _profile_field(f) for f in CLOUD_PROFILE_FIELDS}
 
 # ── Runtime state ──────────────────────────────────────────────────────────────
 
@@ -158,6 +216,7 @@ in_speed = 1.0
 
 _update_in_progress    = False
 _active_meet_file      = ''   # basename of the currently loaded meet file
+_active_meet_uid       = ''   # meet_uid() of the currently loaded meet
 _os_update_in_progress = False
 _update_log_lines      = []
 _update_log_done       = None

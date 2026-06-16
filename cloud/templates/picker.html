@@ -75,6 +75,7 @@
             <div class="card-body">
                 <div class="card-name">{{ meet.name or t.unnamed_meet }}</div>
                 <div class="card-meta">
+                    {% if meet.meet_date %}<span>{{ meet.meet_date }}</span>{% endif %}
                     {% if meet.location %}<span>{{ meet.location }}</span>{% endif %}
                     {% if meet.sport %}<span>{{ meet.sport }}</span>{% endif %}
                 </div>

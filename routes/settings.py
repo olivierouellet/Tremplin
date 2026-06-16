@@ -20,6 +20,26 @@ from worker import _restart_worker
 bp = Blueprint('settings_bp', __name__)
 
 
+def _render_home_icon(name):
+    """Render source icon *name* (in ICONS_DIR) to the active home-icon files.
+
+    Removes the active icon when *name* is empty or its source is missing.
+    """
+    src = os.path.join(state.ICONS_DIR, name) if name else ''
+    if name and os.path.isfile(src):
+        try:
+            from PIL import Image
+            img = Image.open(src).convert('RGBA')
+            img.resize((192, 192), Image.LANCZOS).save(state.HOME_ICON_PATH, 'PNG', optimize=True)
+            img.resize((512, 512), Image.LANCZOS).save(state.HOME_ICON_512_PATH, 'PNG', optimize=True)
+            return
+        except Exception:
+            pass
+    for p in (state.HOME_ICON_PATH, state.HOME_ICON_512_PATH):
+        if os.path.exists(p):
+            os.remove(p)
+
+
 def _load_meet_file(path):
     """Clear current meet state and load *path* (Lenex or Hytek). Returns error string or None."""
     state.event_info.clear()
@@ -45,9 +65,14 @@ def _load_meet_file(path):
         return traceback.format_exc()
     state._active_meet_file = os.path.basename(path)
     state.settings['last_meet_file'] = state._active_meet_file
+    # Switch to this meet's cloud-appearance profile (title, image, icon, …) so
+    # the Meet tab and the cloud publish reflect the loaded meet, not the last one.
+    state._active_meet_uid = state.meet_uid()
+    _render_home_icon(state.apply_meet_profile(state._active_meet_uid))
     with open(state.settings_file, 'wt') as f:
         json.dump(state.settings, f, sort_keys=True, indent=4)
     send_event_info()
+    relay.update_metadata()   # re-register under the new meet_uid before the schedule
     relay.send_schedule()
     return None
 
@@ -64,9 +89,8 @@ def route_settings():
             if file and file.filename:
                 ext = os.path.splitext(file.filename)[1].lower()
                 if ext in ('.csv', '.lxf'):
-                    for f in glob.glob(os.path.join(state.MEET_FOLDER, '*.csv')) + \
-                             glob.glob(os.path.join(state.MEET_FOLDER, '*.lxf')):
-                        os.remove(f)
+                    # Keep other meet files (e.g. each day of a split meet); only
+                    # the uploaded name is overwritten. Manage the rest via Delete.
                     dest = os.path.join(state.MEET_FOLDER, os.path.basename(file.filename))
                     file.save(dest)
                     err = _load_meet_file(dest)
@@ -245,11 +269,26 @@ def route_settings():
                 modified = True
 
         if 'cloud_settings_submit' in flask.request.form:
-            for key in ('cloud_relay_url', 'cloud_relay_key', 'meet_location', 'meet_sport', 'cloud_label_style', 'app_window_title', 'cloud_meet_title'):
+            # Pi-global cloud connection (one relay key per box).
+            for key in ('cloud_relay_url', 'cloud_relay_key'):
                 val = flask.request.form.get(key, '').strip()
                 if val != state.settings.get(key, ''):
                     state.settings[key] = val
                     modified = True
+            if modified:
+                import relay as _relay
+                _relay.update_metadata()
+
+        if 'meet_appearance_submit' in flask.request.form:
+            # Per-meet cloud appearance — saved to the loaded meet's profile so
+            # each meet (e.g. each day of a split meet) keeps its own.
+            for key in ('meet_location', 'meet_sport', 'cloud_label_style',
+                        'app_window_title', 'cloud_meet_title'):
+                val = flask.request.form.get(key, '').strip()
+                if val != state.settings.get(key, ''):
+                    state.settings[key] = val
+                    modified = True
+
             # ── Picker image ──────────────────────────────────────────────────
             picker_image_error = None
             picker_image_file  = flask.request.files.get('picker_image')
@@ -265,16 +304,13 @@ def route_settings():
                     picker_image_error = f'Could not process image: {e}'
             else:
                 selected_pi = flask.request.form.get('selected_picker_image', '').strip()
-                prev_pi     = state.settings.get('active_picker_image', '')
-                if selected_pi != prev_pi:
+                if selected_pi != state.settings.get('active_picker_image', ''):
                     state.settings['active_picker_image'] = selected_pi
                     modified = True
 
             # ── Home screen icon ──────────────────────────────────────────────
             if flask.request.form.get('remove_home_icon'):
-                for p in (state.HOME_ICON_PATH, state.HOME_ICON_512_PATH):
-                    if os.path.exists(p):
-                        os.remove(p)
+                _render_home_icon('')
                 state.settings['active_home_icon'] = ''
                 modified = True
             icon_file = flask.request.files.get('home_icon')
@@ -287,40 +323,24 @@ def route_settings():
                     else:
                         orig_name = os.path.basename(icon_file.filename)
                         img.save(os.path.join(state.ICONS_DIR, orig_name), 'PNG', optimize=True)
-                        src = img.convert('RGBA')
-                        src.resize((192, 192), Image.LANCZOS).save(state.HOME_ICON_PATH, 'PNG', optimize=True)
-                        src.resize((512, 512), Image.LANCZOS).save(state.HOME_ICON_512_PATH, 'PNG', optimize=True)
+                        _render_home_icon(orig_name)
                         state.settings['active_home_icon'] = orig_name
                         modified = True
                 except Exception as e:
                     icon_error = f'Could not process image: {e}'
             else:
                 selected = flask.request.form.get('selected_home_icon', '').strip()
-                prev     = state.settings.get('active_home_icon', '')
-                if selected != prev:
-                    if selected:
-                        src_path = os.path.join(state.ICONS_DIR, selected)
-                        if os.path.isfile(src_path):
-                            try:
-                                from PIL import Image
-                                img = Image.open(src_path).convert('RGBA')
-                                img.resize((192, 192), Image.LANCZOS).save(state.HOME_ICON_PATH, 'PNG', optimize=True)
-                                img.resize((512, 512), Image.LANCZOS).save(state.HOME_ICON_512_PATH, 'PNG', optimize=True)
-                                state.settings['active_home_icon'] = selected
-                                modified = True
-                            except Exception as e:
-                                icon_error = f'Could not apply icon: {e}'
-                    else:
-                        for p in (state.HOME_ICON_PATH, state.HOME_ICON_512_PATH):
-                            if os.path.exists(p):
-                                os.remove(p)
-                        state.settings['active_home_icon'] = ''
-                        modified = True
+                if selected != state.settings.get('active_home_icon', ''):
+                    _render_home_icon(selected)
+                    state.settings['active_home_icon'] = selected
+                    modified = True
+
             if modified:
+                state.save_meet_profile(state._active_meet_uid)
                 import relay as _relay
                 _relay.update_metadata()
 
-        else:
+        elif 'cloud_settings_submit' not in flask.request.form:
             new_name = flask.request.form.get('user_name', '').strip()
             if new_name and new_name != state.settings.get('username'):
                 state.settings['username'] = new_name

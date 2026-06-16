@@ -137,6 +137,29 @@ def _compute_expiry(meet_date, when=None):
     return datetime.datetime.combine(base, datetime.time.min) + datetime.timedelta(days=1)
 
 
+def _meet_id_for(key, meet_uid):
+    """Deterministic cloud meet id for a (relay key, meet_uid) pair.
+
+    Lets one relay key publish several meets — e.g. a meet split across days into
+    separate LENEX files — each landing on its own stable picker card and
+    reattaching on reload.
+    """
+    return hashlib.sha256(f'{key}:{meet_uid}'.encode()).hexdigest()[:11]
+
+
+def _retire_locked(meet_id):
+    """Move a live meet into the retained store with an expiry. Caller holds _lock."""
+    meet = _meets.pop(meet_id, None)
+    if not meet:
+        return
+    snap = _retained.get(meet_id, {})
+    snap.update({k: meet.get(k) for k in _RETAINED_FIELDS})
+    snap['last_seen']  = datetime.datetime.now().isoformat(timespec='seconds')
+    snap['expires_at'] = _compute_expiry(meet.get('meet_date', '')).isoformat(timespec='seconds')
+    _retained[meet_id] = snap
+    _save_retained()
+
+
 def _sweep_expired():
     """Drop retained meets past their expiry. Live meets are never swept."""
     now     = datetime.datetime.now()
@@ -285,6 +308,7 @@ def route_index():
     with _lock:
         meets = [{'id': mid, 'name': m['name'], 'location': m['location'],
                   'sport': m['sport'], 'organizer': m['organizer'],
+                  'meet_date': m.get('meet_date', ''),
                   'offline': mid not in _meets,
                   'has_picker_image': bool(m.get('settings', {}).get('picker_image_b64', ''))}
                  for mid, m in _merged_meets().items()]
@@ -870,16 +894,27 @@ def on_relay_register(data):
                       namespace='/relay', to=flask.request.sid)
         return
 
-    # Stable meet id per key, so a reconnect reattaches to the same retained meet
-    # (and the same picker card) instead of spawning a duplicate.
-    meet_id = keys[key].get('meet_id')
-    if not meet_id:
-        meet_id = secrets.token_urlsafe(8)
-        keys[key]['meet_id'] = meet_id
-        _save_keys(keys)
+    # Meet id is stable per (key, meet_uid): one relay key can publish several
+    # meets (e.g. a meet split across days), each on its own picker card and
+    # reattaching on reload. Legacy relays without a meet_uid keep one slot/key.
+    meet_uid = data.get('meet_uid', '')
+    if meet_uid:
+        meet_id = _meet_id_for(key, meet_uid)
+    else:
+        meet_id = keys[key].get('meet_id')
+        if not meet_id:
+            meet_id = secrets.token_urlsafe(8)
+            keys[key]['meet_id'] = meet_id
+            _save_keys(keys)
 
     sid = flask.request.sid
     with _lock:
+        # If this socket was publishing a different meet (operator switched
+        # LENEX files), retire it so it stays available as schedule-only.
+        prev_id = _relay_sids.get(sid)
+        if prev_id and prev_id != meet_id:
+            _retire_locked(prev_id)
+
         prev = _meets.get(meet_id, {})          # already-live data (settings re-register)
         snap = _retained.get(meet_id, {})        # persisted snapshot (fresh reconnect)
         _meets[meet_id] = {
@@ -917,13 +952,7 @@ def on_relay_disconnect():
         # Guard against a reconnect race: only retire the meet if this socket is
         # still the one bound to it (a newer socket may have re-registered).
         if meet and meet.get('relay_sid') == sid:
-            _meets.pop(meet_id, None)
-            snap = _retained.get(meet_id, {})
-            snap.update({k: meet.get(k) for k in _RETAINED_FIELDS})
-            snap['last_seen']  = datetime.datetime.now().isoformat(timespec='seconds')
-            snap['expires_at'] = _compute_expiry(meet.get('meet_date', '')).isoformat(timespec='seconds')
-            _retained[meet_id] = snap
-            _save_retained()
+            _retire_locked(meet_id)
     if meet_id:
         print(f'[cloud] meet {meet_id} disconnected', flush=True)
 

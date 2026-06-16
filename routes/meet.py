@@ -160,11 +160,14 @@ def route_meet_delete():
                 state.lenex_meet_info.clear()
                 state.lenex_event_distances.clear()
                 state._active_meet_file = ''
+                state._active_meet_uid  = ''
                 state.settings['last_meet_file'] = ''
                 with open(state.settings_file, 'wt') as f:
                     json.dump(state.settings, f, sort_keys=True, indent=4)
                 send_event_info()
-    return flask.redirect('/settings')
+                import relay as _relay
+                _relay.update_metadata()
+    return flask.redirect('/settings#tab-meet')
 
 
 @bp.route('/meet_clear')
@@ -180,8 +183,11 @@ def route_meet_clear():
     state.lenex_meet_info.clear()
     state.lenex_event_distances.clear()
     state._active_meet_file = ''
+    state._active_meet_uid  = ''
     state.settings['last_meet_file'] = ''
     with open(state.settings_file, 'wt') as f:
         json.dump(state.settings, f, sort_keys=True, indent=4)
     send_event_info()
-    return flask.redirect('/settings')
+    import relay as _relay
+    _relay.update_metadata()
+    return flask.redirect('/settings#tab-meet')
