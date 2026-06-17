@@ -115,8 +115,8 @@
 
     <!-- Add to Home Screen hint -->
     <div id="a2hs-hint">
-        <span id="a2hs-ios-text">{{ t.a2hs_tap or 'Tap' }} &#9083; {{ t.a2hs_then or 'then' }} <strong>{{ t.a2hs_action or 'Add to Home Screen' }}</strong></span>
-        <span id="a2hs-android-text">{{ t.a2hs_tap or 'Tap' }} ⋮ {{ t.a2hs_then or 'then' }} <strong>{{ t.a2hs_action or 'Add to Home Screen' }}</strong></span>
+        <span id="a2hs-ios-text">&hellip; &rightarrow; &uparrow; {{ t.a2hs_ios_share or 'Share' }} &rightarrow; &or; {{ t.a2hs_ios_more or 'Show more' }} &rightarrow; &boxplus; <strong>{{ t.a2hs_action or 'Add to Home Screen' }}</strong></span>
+        <span id="a2hs-android-text">{{ t.a2hs_tap or 'Tap' }} ⋮ &rightarrow; <strong>{{ t.a2hs_action or 'Add to Home Screen' }}</strong></span>
         <button id="a2hs-install-btn" onclick="a2hsInstall()">{{ t.a2hs_install or 'Install' }}</button>
         <button class="dismiss" onclick="dismissA2HS()">✕</button>
     </div>
