@@ -3,13 +3,15 @@
 {% block extra_style %}
 #waiting {
     position: fixed;
-    inset: 64px 0 0 0;   /* cover the header's 1px bottom border so no grey seam shows */
+    inset: 65px 0 0 0;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--color-th-text);
     font-size: 1.4em;
-    background: var(--color-bg);
+    /* match the table-header bg so the header's bottom border blends like it does
+       under the live scoreboard, instead of contrasting against the darker page bg */
+    background: var(--color-th-bg);
 }
 #waiting.hidden { display: none; }
 {% endblock %}
