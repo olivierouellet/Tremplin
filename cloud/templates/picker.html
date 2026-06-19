@@ -35,7 +35,13 @@
         .card-name { font-size: 1em; font-weight: 600; margin-bottom: 4px; }
         .card-meta { font-size: 0.85em; color: #666; line-height: 1.5; }
         .card-meta span + span::before { content: ' · '; }
-        .card-offline { display:inline-block; margin-top:4px; font-size:0.72em; color:#c9a84c; text-transform:uppercase; letter-spacing:0.05em; }
+        .live-dot {
+            display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+            background: #4CAF50; margin-right: 8px; vertical-align: middle;
+            box-shadow: 0 0 6px rgba(76,175,80,0.7);
+            animation: live-pulse 2s ease-in-out infinite;
+        }
+        @keyframes live-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
         .empty { color: #444; font-size: 1.1em; margin-top: 60px; }
 
         /* ── Pull-to-refresh ── */
@@ -138,13 +144,12 @@
             <img src="/picker_image/{{ meet.id }}" class="card-img" alt="">
             {% endif %}
             <div class="card-body">
-                <div class="card-name">{{ meet.name or t.unnamed_meet }}</div>
+                <div class="card-name">{% if not meet.offline %}<span class="live-dot"></span>{% endif %}{{ meet.name or t.unnamed_meet }}</div>
                 <div class="card-meta">
                     {% if meet.meet_date %}<span>{{ meet.meet_date }}</span>{% endif %}
                     {% if meet.location %}<span>{{ meet.location }}</span>{% endif %}
                     {% if meet.sport %}<span>{{ meet.sport }}</span>{% endif %}
                 </div>
-                {% if meet.offline %}<span class="card-offline">{{ t.offline or 'Schedule only' }}</span>{% endif %}
             </div>
         </a>
         {% endfor %}
