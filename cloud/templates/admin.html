@@ -220,6 +220,19 @@
                             Image above title
                         </label>
                     </div>
+                    <div class="panel-row" style="align-items:flex-start;flex-direction:column;gap:6px;">
+                        <span style="font-size:0.8em;color:#555;">Home Screen Icon <span style="color:#444;">(square PNG, 512 or 1024 px)</span></span>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <label style="display:inline-block;font-size:0.8em;border:1px solid #333;color:#aaa;padding:4px 10px;border-radius:4px;cursor:pointer;" onmouseover="this.style.color='#fff';this.style.borderColor='#666'" onmouseout="this.style.color='#aaa';this.style.borderColor='#333'">
+                                Upload Image<input type="file" name="picker_icon" accept="image/png" style="display:none;" onchange="previewPickerIcon(this)">
+                            </label>
+                            <button type="button" class="danger" id="picker-icon-remove-btn" onclick="clearPickerIcon()" {% if not has_picker_icon %}hidden{% endif %}>Remove</button>
+                            <img id="picker-icon-current" src="{{ '/picker_icon' if has_picker_icon else '' }}" style="height:36px;width:36px;border-radius:8px;border:1px solid #333;flex-shrink:0;" {% if not has_picker_icon %}hidden{% endif %}>
+                        </div>
+                        <div id="picker-icon-preview" style="display:none;margin-top:4px;">
+                            <img id="picker-icon-preview-img" style="height:60px;width:60px;border-radius:10px;border:1px solid #333;">
+                        </div>
+                    </div>
                     <div class="panel-row">
                         <span class="panel-label"></span>
                         <button type="submit">Save</button>
@@ -450,15 +463,17 @@
         {% endif %}
 
         // ── Picker appearance ─────────────────────────────────────────────────
-        function previewPickerLogo(input) {
+        function previewImage(input, previewId, previewImgId) {
             if (!input.files.length) return;
             const reader = new FileReader();
             reader.onload = e => {
-                document.getElementById('picker-logo-preview-img').src = e.target.result;
-                document.getElementById('picker-logo-preview').hidden = false;
+                document.getElementById(previewImgId).src = e.target.result;
+                document.getElementById(previewId).hidden = false;
             };
             reader.readAsDataURL(input.files[0]);
         }
+        function previewPickerLogo(input) { previewImage(input, 'picker-logo-preview', 'picker-logo-preview-img'); }
+        function previewPickerIcon(input) { previewImage(input, 'picker-icon-preview', 'picker-icon-preview-img'); }
 
         function savePickerAppearance(form) {
             const status = document.getElementById('picker-appearance-status');
@@ -468,15 +483,8 @@
                 .then(d => {
                     if (d.ok) {
                         status.style.color = '#4a4'; status.textContent = 'Saved.';
-                        const hasFile = form.querySelector('input[type=file]').files.length > 0;
-                        if (hasFile) {
-                            const cur = document.getElementById('picker-logo-current');
-                            cur.src = '/picker_logo?' + Date.now();
-                            cur.hidden = false;
-                            document.getElementById('picker-logo-remove-btn').hidden = false;
-                            document.getElementById('picker-logo-preview').hidden = true;
-                            form.querySelector('input[type=file]').value = '';
-                        }
+                        refreshUploaded(form, 'picker_logo', '/picker_logo', 'picker-logo-current', 'picker-logo-remove-btn', 'picker-logo-preview');
+                        refreshUploaded(form, 'picker_icon', '/picker_icon', 'picker-icon-current', 'picker-icon-remove-btn', 'picker-icon-preview');
                     } else {
                         status.style.color = '#c55'; status.textContent = 'Error.';
                     }
@@ -484,17 +492,28 @@
                 .catch(() => { status.style.color = '#c55'; status.textContent = 'Failed.'; });
         }
 
-        function clearPickerLogo() {
-            if (!confirm('Remove the picker logo image?')) return;
+        function refreshUploaded(form, fieldName, url, curId, removeBtnId, previewId) {
+            const input = form.querySelector('input[name="' + fieldName + '"]');
+            if (!input || !input.files.length) return;
+            const cur = document.getElementById(curId);
+            cur.src = url + '?' + Date.now();
+            cur.hidden = false;
+            document.getElementById(removeBtnId).hidden = false;
+            document.getElementById(previewId).hidden = true;
+            input.value = '';
+        }
+
+        function clearPickerImage(label, clearField, curId, removeBtnId) {
+            if (!confirm('Remove the ' + label + '?')) return;
             const status = document.getElementById('picker-appearance-status');
             status.style.color = '#888'; status.textContent = 'Removing…';
-            const fd = new FormData(); fd.append('picker_logo_clear', '1');
+            const fd = new FormData(); fd.append(clearField, '1');
             fetch('/admin/picker_appearance', { method: 'POST', body: fd })
                 .then(r => r.json())
                 .then(d => {
                     if (d.ok) {
-                        document.getElementById('picker-logo-current').hidden = true;
-                        document.getElementById('picker-logo-remove-btn').hidden = true;
+                        document.getElementById(curId).hidden = true;
+                        document.getElementById(removeBtnId).hidden = true;
                         status.style.color = '#4a4'; status.textContent = 'Removed.';
                     } else {
                         status.style.color = '#c55'; status.textContent = 'Error.';
@@ -502,6 +521,8 @@
                 })
                 .catch(() => { status.style.color = '#c55'; status.textContent = 'Failed.'; });
         }
+        function clearPickerLogo() { clearPickerImage('picker logo image', 'picker_logo_clear', 'picker-logo-current', 'picker-logo-remove-btn'); }
+        function clearPickerIcon() { clearPickerImage('home screen icon', 'picker_icon_clear', 'picker-icon-current', 'picker-icon-remove-btn'); }
 
         // ── Restore keys ──────────────────────────────────────────────────────
         function restoreKeys(input) {

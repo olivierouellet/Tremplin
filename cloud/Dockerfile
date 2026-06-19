@@ -14,6 +14,7 @@ COPY locales/ locales/
 COPY static/css/  static/css/
 COPY static/fonts/ static/fonts/
 COPY static/icons/ static/icons/
+COPY static/img/  static/img/
 
 RUN mkdir -p /data
 

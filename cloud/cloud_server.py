@@ -248,6 +248,7 @@ def _picker_appearance():
         'picker_title_form':        'Tremplin' if raw is None else raw,
         'picker_window_title_form': 'Tremplin' if raw_wt is None else raw_wt,
         'has_picker_logo':          bool(creds.get('picker_logo_b64', '')),
+        'has_picker_icon':          bool(creds.get('picker_icon_b64', '')),
         'picker_logo_above':        creds.get('picker_logo_above', False),
     }
 
@@ -562,6 +563,39 @@ def route_picker_logo():
                           headers={'Cache-Control': 'public, max-age=300'})
 
 
+@app.route('/picker_icon')
+def route_picker_icon():
+    icon_b64 = _load_creds().get('picker_icon_b64', '')
+    if not icon_b64:
+        default = os.path.join(os.path.dirname(__file__), 'static', 'img', 'default_mobile_icon.png')
+        if not os.path.exists(default):
+            flask.abort(404)
+        return flask.send_file(default, mimetype='image/png')
+    data = base64.b64decode(icon_b64)
+    return flask.Response(data, mimetype='image/png',
+                          headers={'Cache-Control': 'public, max-age=300'})
+
+
+@app.route('/picker_manifest')
+def route_picker_manifest():
+    creds = _load_creds()
+    raw_wt = creds.get('picker_window_title')
+    app_title = ('Tremplin' if raw_wt is None else raw_wt) or 'Tremplin'
+    manifest = {
+        'name':             app_title,
+        'short_name':       app_title,
+        'start_url':        '/',
+        'display':          'standalone',
+        'background_color': '#000000',
+        'theme_color':      '#000000',
+        'icons': [
+            {'src': '/picker_icon', 'sizes': '192x192', 'type': 'image/png'},
+            {'src': '/picker_icon', 'sizes': '512x512', 'type': 'image/png'},
+        ],
+    }
+    return flask.Response(json.dumps(manifest), mimetype='application/manifest+json')
+
+
 @app.route('/admin/picker_appearance', methods=['POST'])
 def route_picker_appearance():
     denied = _require_admin()
@@ -582,6 +616,12 @@ def route_picker_appearance():
             mime = logo.content_type or 'image/png'
             creds['picker_logo_b64']  = base64.b64encode(data).decode()
             creds['picker_logo_mime'] = mime
+    if flask.request.form.get('picker_icon_clear') == '1':
+        creds['picker_icon_b64'] = ''
+    else:
+        icon = flask.request.files.get('picker_icon')
+        if icon and icon.filename:
+            creds['picker_icon_b64'] = base64.b64encode(icon.read()).decode()
     _save_creds(creds)
     return flask.jsonify({'ok': True})
 
@@ -606,6 +646,7 @@ def route_backup_keys():
             'picker_logo_b64':     creds.get('picker_logo_b64', ''),
             'picker_logo_mime':    creds.get('picker_logo_mime', ''),
             'picker_logo_above':   creds.get('picker_logo_above', False),
+            'picker_icon_b64':     creds.get('picker_icon_b64', ''),
         },
     }
     return flask.Response(
@@ -638,7 +679,7 @@ def route_restore_keys():
         _save_keys(keys)
         if appearance:
             creds = _load_creds()
-            for field in ('picker_title', 'picker_window_title', 'picker_logo_b64', 'picker_logo_mime', 'picker_logo_above'):
+            for field in ('picker_title', 'picker_window_title', 'picker_logo_b64', 'picker_logo_mime', 'picker_logo_above', 'picker_icon_b64'):
                 if field in appearance:
                     creds[field] = appearance[field]
             _save_creds(creds)
