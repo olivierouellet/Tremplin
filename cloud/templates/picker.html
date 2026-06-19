@@ -63,15 +63,37 @@
         #a2hs-hint {
             position: fixed;
             bottom: calc(env(safe-area-inset-bottom) + 16px);
-            left: 50%; transform: translateX(-50%);
-            background: rgba(30,30,30,0.95);
-            color: #fff; font-family: -apple-system, sans-serif; font-size: 13px;
-            padding: 10px 16px; border-radius: 10px; white-space: nowrap;
-            z-index: 100; display: none; align-items: center; gap: 10px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+            left: 16px; right: 16px; max-width: 360px; margin: 0 auto;
+            background: rgba(28,28,30,0.96);
+            -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #fff; font-family: -apple-system, sans-serif;
+            padding: 13px 15px; border-radius: 16px;
+            z-index: 100; display: none; flex-direction: column; gap: 9px;
+            box-shadow: 0 10px 34px rgba(0,0,0,0.55);
         }
-        #a2hs-hint .dismiss { background: none; border: none; color: #aaa; font-size: 16px; cursor: pointer; padding: 0; line-height: 1; }
-        #a2hs-install-btn   { background: #1a3a5c; border: 1px solid #5ab4e8; color: #5ab4e8; font-size: 12px; padding: 4px 10px; border-radius: 5px; cursor: pointer; }
+        #a2hs-hint .dismiss {
+            position: absolute; top: 9px; right: 11px;
+            background: none; border: none; color: #888;
+            font-size: 18px; line-height: 1; cursor: pointer; padding: 0;
+        }
+        #a2hs-hint .dismiss:active { color: #fff; }
+        .a2hs-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; padding-right: 20px; }
+        .a2hs-title svg { width: 17px; height: 17px; stroke: #5ab4e8; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+        .a2hs-steps { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; font-size: 12.5px; color: #b0b0b0; }
+        .a2hs-steps .step { display: inline-flex; align-items: center; gap: 6px; }
+        .a2hs-steps .ico {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 23px; height: 23px; padding: 0 5px;
+            background: rgba(255,255,255,0.10); border-radius: 7px;
+            font-size: 14px; color: #fff; line-height: 1;
+        }
+        .a2hs-steps .sep { color: #5c5c5c; font-size: 13px; }
+        #a2hs-install-btn {
+            align-self: flex-start;
+            background: #1a3a5c; border: 1px solid #5ab4e8; color: #5ab4e8;
+            font-size: 13px; padding: 6px 14px; border-radius: 8px; cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -80,10 +102,24 @@
 
     <!-- Add to Home Screen hint -->
     <div id="a2hs-hint">
-        <span id="a2hs-ios-text">&hellip; &rightarrow; &uparrow; {{ t.a2hs_ios_share or 'Share' }} &rightarrow; &or; {{ t.a2hs_ios_more or 'Show more' }} &rightarrow; &boxplus; <strong>{{ t.a2hs_action or 'Add to Home Screen' }}</strong></span>
-        <span id="a2hs-android-text">{{ t.a2hs_tap or 'Tap' }} ⋮ &rightarrow; <strong>{{ t.a2hs_action or 'Add to Home Screen' }}</strong></span>
+        <button class="dismiss" onclick="dismissA2HS()" aria-label="Dismiss">&times;</button>
+        <div class="a2hs-title">
+            <svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+            <span>{{ t.a2hs_action or 'Add to Home Screen' }}</span>
+        </div>
+        <div id="a2hs-ios-text" class="a2hs-steps">
+            <span class="step"><span class="ico">&uparrow;</span>{{ t.a2hs_ios_share or 'Share' }}</span>
+            <span class="sep">&rsaquo;</span>
+            <span class="step"><span class="ico">&or;</span>{{ t.a2hs_ios_more or 'Show more' }}</span>
+            <span class="sep">&rsaquo;</span>
+            <span class="step"><span class="ico">&boxplus;</span></span>
+        </div>
+        <div id="a2hs-android-text" class="a2hs-steps">
+            <span class="step"><span class="ico">&vellip;</span>{{ t.a2hs_tap or 'Tap' }}</span>
+            <span class="sep">&rsaquo;</span>
+            <span class="step"><span class="ico">&boxplus;</span></span>
+        </div>
         <button id="a2hs-install-btn" onclick="a2hsInstall()">{{ t.a2hs_install or 'Install' }}</button>
-        <button class="dismiss" onclick="dismissA2HS()">✕</button>
     </div>
     {% if picker_logo and picker_logo_above %}
     <img src="/picker_logo" style="max-width:200px;max-height:120px;margin-bottom:16px;border-radius:8px;display:block;">
