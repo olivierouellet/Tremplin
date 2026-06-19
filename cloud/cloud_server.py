@@ -587,8 +587,10 @@ def route_picker_icon():
 
 @app.route('/favicon.ico')
 def route_favicon():
-    # Browsers auto-request this; serve the brand icon (or the default fallback).
-    return route_picker_icon()
+    # Browsers auto-request this; serve a lean, scalable brand mark for the tab.
+    return flask.send_file(
+        os.path.join(os.path.dirname(__file__), 'static', 'img', 'favicon.svg'),
+        mimetype='image/svg+xml')
 
 
 @app.route('/picker_manifest')
