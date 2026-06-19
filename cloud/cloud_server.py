@@ -585,6 +585,12 @@ def route_picker_icon():
                           headers={'Cache-Control': 'public, max-age=300'})
 
 
+@app.route('/favicon.ico')
+def route_favicon():
+    # Browsers auto-request this; serve the brand icon (or the default fallback).
+    return route_picker_icon()
+
+
 @app.route('/picker_manifest')
 def route_picker_manifest():
     creds = _load_creds()
