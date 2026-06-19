@@ -19,9 +19,14 @@
 {% endblock %}
 
 {% block socket %}
+var meet_live = false;   // a relay/console is currently feeding this meet
+function showWaiting() { document.getElementById('waiting').classList.remove('hidden'); }
+
 var sock = io('/results');
 sock.on('connect', function() { sock.emit('join_meet', { meet_id: MEET_ID }); });
 sock.on('reload',   function() { location.reload(); });
+sock.on('disconnect', function() { meet_live = false; showWaiting(); });
+sock.on('meet_live', function(d) { meet_live = !!(d && d.live); if (!meet_live) showWaiting(); });
 sock.on('results_snapshot', function(d) { renderResults(d); });
 
 function renderResults(d) {

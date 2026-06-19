@@ -1063,10 +1063,12 @@ def on_relay_reload(d):
 # ── SocketIO — /scoreboard namespace (attendees) ───────────────────────────────
 
 def _emit_meet_live(meet_id, live):
-    """Tell scoreboard attendees whether a relay is currently feeding this meet,
-    so 'running' lane animations only play while a console is connected."""
-    socketio.emit('meet_live', {'live': live},
-                  room=f'meet:{meet_id}', namespace='/scoreboard')
+    """Tell scoreboard/results attendees whether a relay is currently feeding this
+    meet, so live-only UI (the running-lane glow, the results board) reverts to its
+    idle state when no console is connected."""
+    for ns in ('/scoreboard', '/results'):
+        socketio.emit('meet_live', {'live': live},
+                      room=f'meet:{meet_id}', namespace=ns)
 
 
 @socketio.on('connect', namespace='/scoreboard')
@@ -1104,9 +1106,13 @@ def on_results_join(data):
     meet_id = data.get('meet_id', '')
     with _lock:
         meet = _get_meet(meet_id)
+        live = meet_id in _meets
     if not meet:
         return
     flask_socketio.join_room(f'meet:{meet_id}')
+    # Live status first, so the page reverts to "Waiting…" when no relay is feeding.
+    socketio.emit('meet_live', {'live': live},
+                  namespace='/results', to=flask.request.sid)
     if meet.get('last_results'):
         socketio.emit('results_snapshot', meet['last_results'],
                       namespace='/results', to=flask.request.sid)
