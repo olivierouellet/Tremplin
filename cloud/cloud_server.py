@@ -44,19 +44,28 @@ def _strings(lang, section):
             _locale_cache[lang] = tomllib.load(f)
     return _locale_cache[lang].get(section, {})
 
+def _browser_lang():
+    """First Accept-Language entry matching an available locale, or None."""
+    available = {code for code, _ in _available_locales()}
+    accept = flask.request.headers.get('Accept-Language', '')
+    for part in accept.replace('-', '_').split(','):
+        code = part.split(';')[0].strip().split('_')[0].lower()
+        if code in available:
+            return code
+    return None
+
 def _server_lang():
+    # Admin's pinned locale wins; otherwise follow the browser.
     available = {code for code, _ in _available_locales()}
     stored = _load_creds().get('locale', '')
     if stored and stored in available:
         return stored
-    lang = 'en'
-    accept = flask.request.headers.get('Accept-Language', 'en')
-    for part in accept.replace('-', '_').split(','):
-        code = part.split(';')[0].strip().split('_')[0].lower()
-        if code in available:
-            lang = code
-            break
-    return lang
+    return _browser_lang() or 'en'
+
+def _picker_lang():
+    # Public picker: each visitor's browser language wins; the admin/default
+    # locale is only a fallback when the browser language isn't available.
+    return _browser_lang() or _server_lang()
 
 def _load_cloud_strings():
     return _strings(_server_lang(), 'cloud')
@@ -316,7 +325,7 @@ def route_index():
     creds     = _load_creds()
     raw_title = creds.get('picker_title')
     raw_wt    = creds.get('picker_window_title')
-    return flask.render_template('picker.html', meets=meets, t=_load_cloud_strings(),
+    return flask.render_template('picker.html', meets=meets, t=_strings(_picker_lang(), 'cloud'),
         picker_title=('Tremplin' if raw_title is None else raw_title),
         picker_window_title=('Tremplin' if raw_wt is None else raw_wt),
         picker_logo=bool(creds.get('picker_logo_b64', '')),
