@@ -7,6 +7,7 @@ var lane_place_blank = {};
 var lane_time_blank  = {};
 var lane_name_blank  = {};
 var last_event = 0, last_heat = 0, last_state = 0, current_state = 0;
+var meet_live = false;   // a relay/console is currently feeding this meet
 
 var VALID_FIELDS = new Set([
     "current_event","current_heat","event_name",
@@ -30,6 +31,7 @@ function mode_to_running() { }
 function mode_to_results() { }
 
 function isLaneActive(i) {
+    if (!meet_live) return false;   // no console connected — never animate
     if (lane_running[i]) return true;
     return (lane_place_blank[i] && !lane_time_blank[i]);
 }
@@ -42,6 +44,7 @@ function updateAllLanePulses() {
 }
 function reset_state() {
     current_state=0; last_state=0; last_event=0; last_heat=0;
+    meet_live=false;
     lane_running={}; lane_place_blank={}; lane_time_blank={}; lane_name_blank={};
     updateAllLanePulses();
 }
@@ -59,6 +62,8 @@ socket.on('connect', function() {
     socket.emit('join_meet', { meet_id: MEET_ID });
 });
 socket.on('reload', function() { location.reload(); });
+socket.on('disconnect', function() { meet_live = false; updateAllLanePulses(); });
+socket.on('meet_live', function(d) { meet_live = !!(d && d.live); updateAllLanePulses(); });
 socket.on('update_scoreboard', function(new_s) {
     for (var k in new_s) { s[k] = new_s[k]; }
     for (var k in s) {

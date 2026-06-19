@@ -990,6 +990,7 @@ def on_relay_register(data):
 
     socketio.emit('registered', {'meet_id': meet_id},
                   namespace='/relay', to=sid)
+    _emit_meet_live(meet_id, True)
     print(f'[cloud] {keys[key]["organizer"]} registered as meet {meet_id}', flush=True)
 
 
@@ -1001,8 +1002,11 @@ def on_relay_disconnect():
         meet    = _meets.get(meet_id) if meet_id else None
         # Guard against a reconnect race: only retire the meet if this socket is
         # still the one bound to it (a newer socket may have re-registered).
-        if meet and meet.get('relay_sid') == sid:
+        retired = bool(meet and meet.get('relay_sid') == sid)
+        if retired:
             _retire_locked(meet_id)
+    if retired:
+        _emit_meet_live(meet_id, False)
     if meet_id:
         print(f'[cloud] meet {meet_id} disconnected', flush=True)
 
@@ -1058,6 +1062,13 @@ def on_relay_reload(d):
 
 # ── SocketIO — /scoreboard namespace (attendees) ───────────────────────────────
 
+def _emit_meet_live(meet_id, live):
+    """Tell scoreboard attendees whether a relay is currently feeding this meet,
+    so 'running' lane animations only play while a console is connected."""
+    socketio.emit('meet_live', {'live': live},
+                  room=f'meet:{meet_id}', namespace='/scoreboard')
+
+
 @socketio.on('connect', namespace='/scoreboard')
 def on_scoreboard_connect():
     pass
@@ -1068,9 +1079,14 @@ def on_scoreboard_join(data):
     meet_id = data.get('meet_id', '')
     with _lock:
         meet = _get_meet(meet_id)
+        live = meet_id in _meets
     if not meet:
         return
     flask_socketio.join_room(f'meet:{meet_id}')
+    # Send live status first so the page knows whether to animate before the
+    # cached scoreboard snapshot is applied.
+    socketio.emit('meet_live', {'live': live},
+                  namespace='/scoreboard', to=flask.request.sid)
     if meet.get('last_scoreboard'):
         socketio.emit('update_scoreboard', meet['last_scoreboard'],
                       namespace='/scoreboard', to=flask.request.sid)
