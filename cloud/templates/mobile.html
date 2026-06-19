@@ -101,34 +101,12 @@
             .edge-left  { left:  env(safe-area-inset-left); }
             .edge-right { right: env(safe-area-inset-right); }
         }
-
-        /* ── Add to Home Screen hint ── */
-        #a2hs-hint {
-            position: fixed;
-            bottom: calc(65px + env(safe-area-inset-bottom) + 10px);
-            left: 50%; transform: translateX(-50%);
-            background: rgba(30,30,30,0.95);
-            color: #fff; font-family: -apple-system, sans-serif; font-size: 13px;
-            padding: 10px 16px; border-radius: 10px; white-space: nowrap;
-            z-index: 100; display: none; align-items: center; gap: 10px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.5);
-        }
-        #a2hs-hint .dismiss { background: none; border: none; color: #aaa; font-size: 16px; cursor: pointer; padding: 0; line-height: 1; }
-        #a2hs-install-btn   { background: #1a3a5c; border: 1px solid #5ab4e8; color: #5ab4e8; font-size: 12px; padding: 4px 10px; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
     <iframe id="frame0" class="active" src="/mobile/live?meet={{ meet_id }}"></iframe>
     <iframe id="frame1"               src="/mobile/results?meet={{ meet_id }}"></iframe>
     <iframe id="frame2"               src="/mobile/schedule?meet={{ meet_id }}"></iframe>
-
-    <!-- Add to Home Screen hint -->
-    <div id="a2hs-hint">
-        <span id="a2hs-ios-text">&hellip; &rightarrow; &uparrow; {{ t.a2hs_ios_share or 'Share' }} &rightarrow; &or; {{ t.a2hs_ios_more or 'Show more' }} &rightarrow; &boxplus; <strong>{{ t.a2hs_action or 'Add to Home Screen' }}</strong></span>
-        <span id="a2hs-android-text">{{ t.a2hs_tap or 'Tap' }} ⋮ &rightarrow; <strong>{{ t.a2hs_action or 'Add to Home Screen' }}</strong></span>
-        <button id="a2hs-install-btn" onclick="a2hsInstall()">{{ t.a2hs_install or 'Install' }}</button>
-        <button class="dismiss" onclick="dismissA2HS()">✕</button>
-    </div>
 
     <div class="edge edge-left"  id="edgeL"></div>
     <div class="edge edge-right" id="edgeR"></div>
@@ -154,62 +132,6 @@
     </nav>
 
     <script>
-        // ── Add to Home Screen ────────────────────────────────────────────────
-        (function() {
-            var isIOS        = /iphone|ipad|ipod/i.test(navigator.userAgent);
-            var isAndroid    = /android/i.test(navigator.userAgent);
-            var isStandalone = navigator.standalone === true ||
-                               matchMedia('(display-mode: standalone)').matches;
-            if (isStandalone || localStorage.getItem('a2hs_dismissed')) return;
-
-            var hint     = document.getElementById('a2hs-hint');
-            var iosEl    = document.getElementById('a2hs-ios-text');
-            var andEl    = document.getElementById('a2hs-android-text');
-            var instBtn  = document.getElementById('a2hs-install-btn');
-            var deferred = null;
-
-            function show(autoHide) {
-                hint.style.display = 'flex';
-                if (autoHide) setTimeout(function() {
-                    if (hint.style.display !== 'none') hint.style.display = 'none';
-                }, 8000);
-            }
-
-            if (isIOS) {
-                iosEl.style.display = ''; andEl.style.display = 'none'; instBtn.style.display = 'none';
-                show(true);
-            } else if (isAndroid) {
-                iosEl.style.display = 'none'; instBtn.style.display = 'none';
-                andEl.style.display = '';
-                show(true);
-                window.addEventListener('beforeinstallprompt', function(e) {
-                    e.preventDefault(); deferred = e;
-                    andEl.style.display = 'none'; instBtn.style.display = '';
-                    hint.style.display = 'flex'; // re-show if auto-hidden
-                });
-                window.addEventListener('appinstalled', function() {
-                    hint.style.display = 'none';
-                    localStorage.setItem('a2hs_dismissed', '1');
-                });
-            }
-
-            window.a2hsInstall = function() {
-                if (!deferred) return;
-                deferred.prompt();
-                deferred.userChoice.then(function(r) {
-                    deferred = null;
-                    if (r.outcome === 'accepted') {
-                        localStorage.setItem('a2hs_dismissed', '1');
-                        hint.style.display = 'none';
-                    }
-                });
-            };
-            window.dismissA2HS = function() {
-                hint.style.display = 'none';
-                localStorage.setItem('a2hs_dismissed', '1');
-            };
-        })();
-
         // ── Tab navigation ────────────────────────────────────────────────────
         const frames = [0,1,2].map(i => document.getElementById('frame' + i));
         const tabs   = [0,1,2].map(i => document.getElementById('tab'   + i));
