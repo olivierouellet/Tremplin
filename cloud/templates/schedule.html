@@ -457,6 +457,20 @@ const MEET_ID = '{{ meet_id }}';
 const HEATS   = {{ heats_json | safe }};
 const LABELS  = {{ labels | tojson }};
 
+// Random per-device id for anonymous attendance counting (opt-in, admin side).
+function tremplinVid() {
+    try {
+        var k = 'tremplin_vid', v = localStorage.getItem(k);
+        if (!v) {
+            v = (window.crypto && crypto.randomUUID)
+                ? crypto.randomUUID()
+                : 'v' + Date.now() + Math.random().toString(36).slice(2);
+            localStorage.setItem(k, v);
+        }
+        return v;
+    } catch (e) { return ''; }
+}
+
 var activeFilters = [];
 var _searchTimer  = null;
 var currentEvent  = null;
@@ -690,13 +704,13 @@ var sockScoreboard = io('/scoreboard');
 var sockSchedule   = io('/schedule');
 
 sockResults.on('connect', function() {
-    sockResults.emit('join_meet', { meet_id: MEET_ID });
+    sockResults.emit('join_meet', { meet_id: MEET_ID, vid: tremplinVid() });
 });
 sockScoreboard.on('connect', function() {
-    sockScoreboard.emit('join_meet', { meet_id: MEET_ID });
+    sockScoreboard.emit('join_meet', { meet_id: MEET_ID, vid: tremplinVid() });
 });
 sockSchedule.on('connect', function() {
-    sockSchedule.emit('join_meet', { meet_id: MEET_ID });
+    sockSchedule.emit('join_meet', { meet_id: MEET_ID, vid: tremplinVid() });
 });
 
 sockResults.on('results_snapshot', function(d) {

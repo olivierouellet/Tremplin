@@ -88,8 +88,37 @@
 
         <!-- ── Meets (live + retained) ── -->
         <div class="tab-pane active" id="tab-meets">
+
+            <!-- Attendance counting (opt-in) -->
+            <div class="panel" style="margin-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <h2 style="margin:0 0 4px;">{{ t.get('analytics_title', 'Attendance counting') }}</h2>
+                        <p style="margin:0;font-size:0.82em;color:#888;max-width:420px;">{{ t.get('analytics_desc', 'Count unique visitors per meet over a chosen period. Anonymous: a random per-device id is stored, never names or IP addresses.') }}</p>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+                        <span class="badge {{ 'badge-live' if analytics_enabled else 'badge-inactive' }}">{{ (t.get('analytics_on', 'On') if analytics_enabled else t.get('analytics_off', 'Off')) }}</span>
+                        <form method="post" style="display:inline;">
+                            <input type="hidden" name="action" value="set_analytics">
+                            <input type="hidden" name="analytics_enabled" value="{{ '0' if analytics_enabled else '1' }}">
+                            <button type="submit" class="{{ 'danger' if analytics_enabled else '' }}">{{ (t.get('analytics_disable', 'Disable') if analytics_enabled else t.get('analytics_enable', 'Enable')) }}</button>
+                        </form>
+                    </div>
+                </div>
+                <details style="margin-top:12px;">
+                    <summary style="cursor:pointer;font-size:0.82em;color:#c9a227;">{{ t.get('analytics_legal_summary', '⚠ Where this is legal — read before enabling') }}</summary>
+                    <div style="font-size:0.8em;color:#aaa;line-height:1.55;margin-top:10px;">
+                        <p style="margin:0 0 10px;">{{ t.get('analytics_legal_intro', 'You are responsible for how attendance data is collected where your meet takes place. This feature is built to be privacy-friendly (anonymous, first-party, aggregate only, no cross-site tracking), but the law differs by region:') }}</p>
+                        <p style="margin:0 0 8px;"><b>{{ t.get('analytics_legal_ca_h', 'Canada') }}</b> — {{ t.get('analytics_legal_ca', 'Generally permitted. No consent pop-up is required for anonymous, first-party audience counting, but PIPEDA and Quebec Law 25 require that you inform visitors (the app shows a short privacy note) and that you do not use the id to identify, locate, or profile anyone. Keep it aggregate only.') }}</p>
+                        <p style="margin:0 0 8px;"><b>{{ t.get('analytics_legal_us_h', 'United States') }}</b> — {{ t.get('analytics_legal_us', 'Generally permitted with a privacy notice. State laws (e.g. California CCPA/CPRA) focus on selling/sharing personal data, which this feature does not do. Disclosing it in a privacy notice is the safe practice.') }}</p>
+                        <p style="margin:0 0 8px;"><b>{{ t.get('analytics_legal_eu_h', 'Europe (EU / UK)') }}</b> — {{ t.get('analytics_legal_eu', 'Stricter. Storing an id on a visitor device normally requires consent under the ePrivacy Directive, unless it qualifies for the audience-measurement exemption that some regulators (e.g. the CNIL in France, the ICO in the UK) allow for anonymous first-party analytics. If you have EU/UK visitors, confirm you meet those conditions or add a consent banner before enabling.') }}</p>
+                        <p style="margin:10px 0 0;color:#666;">{{ t.get('analytics_legal_disclaimer', 'This is general information, not legal advice. When in doubt, check with whoever handles your compliance.') }}</p>
+                    </div>
+                </details>
+            </div>
+
             <table>
-                <thead><tr><th>{{ t.col_meet }}</th><th>{{ t.col_location }}</th><th>{{ t.col_sport }}</th><th>{{ t.col_organizer }}</th><th>{{ t.col_language }}</th><th>{{ t.col_status or 'Status' }}</th><th></th></tr></thead>
+                <thead><tr><th>{{ t.col_meet }}</th><th>{{ t.col_location }}</th><th>{{ t.col_sport }}</th><th>{{ t.col_organizer }}</th><th>{{ t.col_language }}</th>{% if analytics_enabled %}<th>{{ t.get('col_attendees', 'Attendees') }}</th>{% endif %}<th>{{ t.col_status or 'Status' }}</th><th></th></tr></thead>
                 <tbody>
                 {% if active_meets %}
                     {% for m in active_meets %}
@@ -99,6 +128,19 @@
                         <td>{{ m.sport or '—' }}</td>
                         <td>{{ m.organizer }}</td>
                         <td>{{ m.language or '—' }}</td>
+                        {% if analytics_enabled %}
+                        <td style="white-space:nowrap;">
+                            <select onchange="loadAttendees(this)" style="font-size:0.82em;">
+                                <option value="1h">{{ t.get('win_1h', 'Last hour') }}</option>
+                                <option value="3h">{{ t.get('win_3h', 'Last 3 hours') }}</option>
+                                <option value="12h">{{ t.get('win_12h', 'Last 12 hours') }}</option>
+                                <option value="24h" selected>{{ t.get('win_24h', 'Last 24 hours') }}</option>
+                                <option value="7d">{{ t.get('win_7d', 'Last 7 days') }}</option>
+                                <option value="all">{{ t.get('win_all', 'Whole meet') }}</option>
+                            </select>
+                            <span class="att-count" data-meet="{{ m.id }}" style="margin-left:6px;font-weight:bold;">…</span>
+                        </td>
+                        {% endif %}
                         {% if m.live %}
                         <td><span class="badge badge-live">{{ t.badge_live }}</span><br><span style="font-size:0.78em;color:#666;">{{ t.col_since or 'since' }} {{ m.connected_at }}</span></td>
                         <td></td>
@@ -121,7 +163,7 @@
                     </tr>
                     {% endfor %}
                 {% else %}
-                    <tr class="empty-row"><td colspan="7">{{ t.no_meets_admin }}</td></tr>
+                    <tr class="empty-row"><td colspan="{{ 8 if analytics_enabled else 7 }}">{{ t.no_meets_admin }}</td></tr>
                 {% endif %}
                 </tbody>
             </table>
@@ -336,6 +378,26 @@
     </div><!-- /.tab-content -->
 
     <script>
+        // ── Attendance counts ──────────────────────────────────────────────────
+        function refreshAttendees(span, win) {
+            const meetId = span.getAttribute('data-meet');
+            span.textContent = '…';
+            fetch('/admin/stats?meet_id=' + encodeURIComponent(meetId) + '&window=' + win)
+                .then(r => r.json())
+                .then(d => { span.textContent = (d.count != null) ? d.count : '–'; })
+                .catch(() => { span.textContent = '–'; });
+        }
+        function loadAttendees(sel) {
+            const span = sel.closest('td').querySelector('.att-count');
+            if (span) refreshAttendees(span, sel.value);
+        }
+        window.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.att-count').forEach(function(span) {
+                const sel = span.closest('td').querySelector('select');
+                refreshAttendees(span, sel ? sel.value : '24h');
+            });
+        });
+
         // ── Tab switching ──────────────────────────────────────────────────────
         function showTab(hash) {
             const target = hash || '#tab-meets';

@@ -58,7 +58,7 @@ function apply_state() {
 var socket = io('/scoreboard');
 socket.on('connect', function() {
     reset_state();
-    socket.emit('join_meet', { meet_id: MEET_ID });
+    socket.emit('join_meet', { meet_id: MEET_ID, vid: tremplinVid() });
 });
 socket.on('reload', function() { location.reload(); });
 socket.on('disconnect', function() { meet_live = false; updateAllLanePulses(); });

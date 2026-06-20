@@ -159,6 +159,11 @@
     {% else %}
     <div class="empty">{{ t.no_meets }}</div>
     {% endif %}
+    {% if analytics_enabled %}
+    <p style="margin:28px auto 12px;max-width:340px;text-align:center;font-size:0.72em;color:#555;line-height:1.5;">
+        {{ t.get('privacy_note', 'This site counts visitors anonymously to estimate attendance. No personal information is collected or shared.') }}
+    </p>
+    {% endif %}
     <script>
         // ── Add to Home Screen ────────────────────────────────────────────────
         (function() {

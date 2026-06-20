@@ -11,6 +11,7 @@ import hmac
 import json
 import os
 import secrets
+import sqlite3
 import threading
 import tomllib
 import urllib.request
@@ -22,6 +23,7 @@ DATA_DIR    = os.environ.get('DATA_DIR', '/data')
 KEYS_FILE   = os.path.join(DATA_DIR, 'keys.json')
 CREDS_FILE  = os.path.join(DATA_DIR, 'credentials.json')
 MEETS_FILE  = os.path.join(DATA_DIR, 'meets.json')
+ANALYTICS_FILE = os.path.join(DATA_DIR, 'analytics.db')
 LOCALES_DIR = os.path.join(os.path.dirname(__file__), 'locales')
 
 _locale_cache = {}
@@ -310,6 +312,78 @@ def _require_admin():
     return None
 
 
+# ── Attendee analytics (opt-in) ────────────────────────────────────────────────
+# When the admin enables it, each attendee `join_meet` is logged as one row keyed
+# by a random per-device id the mobile page stores in localStorage. "How many
+# people in the last X" is then COUNT(DISTINCT visitor_id) over that window. No IP
+# or personal data is ever stored. Off by default — see the legal note in the
+# admin panel. Lives in its own SQLite file inside the existing /data volume.
+
+_ANALYTICS_RETENTION_DAYS = 120
+_analytics_lock = threading.Lock()
+_analytics_db   = None
+
+# window key -> timedelta; 'all' means since the beginning of time.
+_ANALYTICS_WINDOWS = {
+    '1h':  datetime.timedelta(hours=1),
+    '3h':  datetime.timedelta(hours=3),
+    '12h': datetime.timedelta(hours=12),
+    '24h': datetime.timedelta(hours=24),
+    '7d':  datetime.timedelta(days=7),
+}
+
+
+def _get_analytics_db():
+    """Lazily open the analytics DB. Caller holds _analytics_lock."""
+    global _analytics_db
+    if _analytics_db is None:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        db = sqlite3.connect(ANALYTICS_FILE, check_same_thread=False)
+        db.execute('CREATE TABLE IF NOT EXISTS connections ('
+                   'meet_id TEXT, visitor_id TEXT, ts INTEGER, namespace TEXT)')
+        db.execute('CREATE INDEX IF NOT EXISTS idx_conn_meet_ts '
+                   'ON connections (meet_id, ts)')
+        db.commit()
+        _analytics_db = db
+    return _analytics_db
+
+
+def _analytics_enabled():
+    return bool(_load_creds().get('analytics_enabled'))
+
+
+def _log_connection(meet_id, visitor_id, namespace):
+    """Record one attendee join. No-op unless analytics is enabled."""
+    if not meet_id or not visitor_id or not _analytics_enabled():
+        return
+    visitor_id = str(visitor_id)[:64]
+    now = int(datetime.datetime.now().timestamp())
+    with _analytics_lock:
+        db = _get_analytics_db()
+        db.execute('INSERT INTO connections VALUES (?, ?, ?, ?)',
+                   (meet_id, visitor_id, now, namespace))
+        db.commit()
+
+
+def _attendee_count(meet_id, since_ts):
+    """Distinct visitors of a meet since `since_ts` (unix seconds)."""
+    with _analytics_lock:
+        db = _get_analytics_db()
+        row = db.execute('SELECT COUNT(DISTINCT visitor_id) FROM connections '
+                         'WHERE meet_id = ? AND ts >= ?', (meet_id, since_ts)).fetchone()
+    return row[0] if row else 0
+
+
+def _analytics_prune():
+    """Drop rows past the retention window so the DB stays small."""
+    cutoff = int((datetime.datetime.now()
+                  - datetime.timedelta(days=_ANALYTICS_RETENTION_DAYS)).timestamp())
+    with _analytics_lock:
+        db = _get_analytics_db()
+        db.execute('DELETE FROM connections WHERE ts < ?', (cutoff,))
+        db.commit()
+
+
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
 @app.route('/')
@@ -329,7 +403,8 @@ def route_index():
         picker_title=('Tremplin' if raw_title is None else raw_title),
         picker_window_title=('Tremplin' if raw_wt is None else raw_wt),
         picker_logo=bool(creds.get('picker_logo_b64', '')),
-        picker_logo_above=creds.get('picker_logo_above', False))
+        picker_logo_above=creds.get('picker_logo_above', False),
+        analytics_enabled=_analytics_enabled())
 
 
 @app.route('/mobile')
@@ -840,6 +915,23 @@ def route_versions():
         return flask.jsonify({'ok': False, 'error': str(e)}), 502
 
 
+@app.route('/admin/stats')
+def route_stats():
+    denied = _require_admin()
+    if denied:
+        return flask.jsonify({'error': 'auth'}), 401
+    if not _analytics_enabled():
+        return flask.jsonify({'enabled': False, 'count': None})
+    meet_id = flask.request.args.get('meet_id', '')
+    window  = flask.request.args.get('window', '24h')
+    if window == 'all':
+        since = 0
+    else:
+        delta = _ANALYTICS_WINDOWS.get(window, _ANALYTICS_WINDOWS['24h'])
+        since = int((datetime.datetime.now() - delta).timestamp())
+    return flask.jsonify({'enabled': True, 'count': _attendee_count(meet_id, since)})
+
+
 @app.route('/admin', methods=['GET', 'POST'])
 def route_admin():
     denied = _require_admin()
@@ -887,6 +979,11 @@ def route_admin():
                 if meet_id in _retained and meet_id not in _meets:
                     del _retained[meet_id]
                     _save_retained()
+        elif action == 'set_analytics':
+            creds = _load_creds()
+            creds['analytics_enabled'] = flask.request.form.get('analytics_enabled') == '1'
+            _save_creds(creds)
+            return flask.redirect(flask.url_for('route_admin'))
         elif action == 'change_locale':
             locale = flask.request.form.get('locale', '')
             creds  = _load_creds()
@@ -922,6 +1019,7 @@ def route_admin():
                                          locales=_available_locales(),
                                          current_locale=_load_creds().get('locale', ''),
                                          has_deploy=bool(os.environ.get('DEPLOY_WEBHOOK_URL')),
+                                         analytics_enabled=_analytics_enabled(),
                                          **_picker_appearance())
         return flask.redirect(flask.url_for('route_admin'))
 
@@ -932,6 +1030,7 @@ def route_admin():
                                  locales=_available_locales(),
                                  current_locale=_load_creds().get('locale', ''),
                                  has_deploy=bool(os.environ.get('DEPLOY_WEBHOOK_URL')),
+                                 analytics_enabled=_analytics_enabled(),
                                  **_picker_appearance())
 
 
@@ -1093,6 +1192,7 @@ def on_scoreboard_join(data):
     if not meet:
         return
     flask_socketio.join_room(f'meet:{meet_id}')
+    _log_connection(meet_id, data.get('vid', ''), 'scoreboard')
     # Send live status first so the page knows whether to animate before the
     # cached scoreboard snapshot is applied.
     socketio.emit('meet_live', {'live': live},
@@ -1118,6 +1218,7 @@ def on_results_join(data):
     if not meet:
         return
     flask_socketio.join_room(f'meet:{meet_id}')
+    _log_connection(meet_id, data.get('vid', ''), 'results')
     # Live status first, so the page reverts to "Waiting…" when no relay is feeding.
     socketio.emit('meet_live', {'live': live},
                   namespace='/results', to=flask.request.sid)
@@ -1144,6 +1245,7 @@ def on_schedule_join(data):
     if not meet:
         return
     flask_socketio.join_room(f'meet:{meet_id}')
+    _log_connection(meet_id, data.get('vid', ''), 'schedule')
 
 
 # ── Theme defaults (fallback when Pi hasn't sent settings yet) ─────────────────
@@ -1165,4 +1267,5 @@ _DEFAULT_FONTS = {
 
 if __name__ == '__main__':
     os.makedirs(DATA_DIR, exist_ok=True)
+    _analytics_prune()
     socketio.run(app, host='0.0.0.0', port=5000)
