@@ -121,6 +121,7 @@ analytics_legal_us         = "Généralement permis avec un avis de confidential
 analytics_legal_eu_h       = "Europe (UE / R.-U.)"
 analytics_legal_eu         = "Plus strict. Le stockage d'un identifiant sur l'appareil d'un visiteur exige normalement le consentement en vertu de la directive ePrivacy, sauf s'il bénéficie de l'exemption de mesure d'audience que certains régulateurs (p. ex. la CNIL en France, l'ICO au R.-U.) accordent aux statistiques anonymes de première partie. Si vous avez des visiteurs de l'UE/R.-U., assurez-vous de remplir ces conditions ou ajoutez une bannière de consentement avant d'activer."
 analytics_legal_disclaimer = "Ceci est une information générale, et non un avis juridique. En cas de doute, vérifiez auprès de la personne responsable de votre conformité."
+results_disclaimer = "Les résultats sont en direct, non officiels et sujets à une validation. Les résultats validés sont disponibles sur l'application SplashMe."
 privacy_note      = "Ce site compte les visiteurs de façon anonyme pour estimer l'assistance. Aucun renseignement personnel n'est recueilli ni partagé."
 offline         = "Horaire seulement"
 organizers      = "Organisateurs"

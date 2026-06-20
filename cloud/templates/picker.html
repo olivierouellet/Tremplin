@@ -159,8 +159,11 @@
     {% else %}
     <div class="empty">{{ t.no_meets }}</div>
     {% endif %}
+    <p style="margin:28px auto 0;max-width:340px;text-align:center;font-size:0.74em;color:#999;line-height:1.5;border:1px solid #333;border-radius:8px;background:#141414;padding:12px 16px;">
+        {{ t.get('results_disclaimer', 'These are live, unofficial results and are subject to validation. Validated results will be available on the SplashMe app.') }}
+    </p>
     {% if analytics_enabled %}
-    <p style="margin:28px auto 12px;max-width:340px;text-align:center;font-size:0.72em;color:#555;line-height:1.5;">
+    <p style="margin:12px auto;max-width:340px;text-align:center;font-size:0.72em;color:#555;line-height:1.5;">
         {{ t.get('privacy_note', 'This site counts visitors anonymously to estimate attendance. No personal information is collected or shared.') }}
     </p>
     {% endif %}

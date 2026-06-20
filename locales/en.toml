@@ -115,6 +115,7 @@ analytics_legal_us         = "Generally permitted with a privacy notice. State l
 analytics_legal_eu_h       = "Europe (EU / UK)"
 analytics_legal_eu         = "Stricter. Storing an id on a visitor's device normally requires consent under the ePrivacy Directive, unless it qualifies for the audience-measurement exemption that some regulators (e.g. France's CNIL, UK ICO) allow for anonymous first-party analytics. If you have EU/UK visitors, confirm you meet those conditions or add a consent banner before enabling."
 analytics_legal_disclaimer = "This is general information, not legal advice. When in doubt, check with whoever handles your compliance."
+results_disclaimer = "These are live, unofficial results and are subject to validation. Validated results will be available on the SplashMe app."
 privacy_note      = "This site counts visitors anonymously to estimate attendance. No personal information is collected or shared."
 offline         = "Schedule only"
 organizers      = "Organizers"
