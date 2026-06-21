@@ -77,6 +77,66 @@ def _load_meet_file(path):
     return None
 
 
+def _candidate_meet_uid(path, name):
+    """meet_uid() the file at *path* would produce, without disturbing state.
+
+    *name* is the original upload filename, used for the no-name fallback (Hytek
+    CSV, or a Lenex with no meet name/dates) so the comparison matches what
+    meet_uid() computed when the meet was first loaded.
+    """
+    base = os.path.basename(name)
+    if path.endswith('.csv'):
+        return state.uid_from_meet_info({}, base)
+    data = load_lenex(path)
+    return state.uid_from_meet_info(data.meet_info, base)
+
+
+@bp.route('/meet_update_file', methods=['POST'])
+@flask_login.login_required
+def route_meet_update_file():
+    """Replace the loaded meet's file in place, keeping its cloud link.
+
+    Only a file that is the *same* meet (matching meet_uid — same name and
+    session dates) is accepted; anything else is rejected so connected attendees
+    are never orphaned onto a new picker card. The new file overwrites the
+    current meet file in place, then is reloaded and republished.
+    """
+    if state._test_session is not None:
+        return flask.jsonify(ok=False, error='A test session is running.')
+    if not state._active_meet_file:
+        return flask.jsonify(ok=False, error='No meet is loaded to update.')
+    file = flask.request.files.get('meet_file')
+    if not file or not file.filename:
+        return flask.jsonify(ok=False, error='No file selected.')
+    ext = os.path.splitext(file.filename)[1].lower()
+    active_ext = os.path.splitext(state._active_meet_file)[1].lower()
+    if ext != active_ext:
+        return flask.jsonify(ok=False, error=f'The new file must be a {active_ext} file, like the current meet.')
+
+    tmp = os.path.join(state.MEET_FOLDER, '.update_candidate' + ext)
+    file.save(tmp)
+    try:
+        new_uid = _candidate_meet_uid(tmp, file.filename)
+    except Exception:
+        os.remove(tmp)
+        return flask.jsonify(ok=False, error='Could not read that file.')
+
+    if new_uid != state._active_meet_uid:
+        os.remove(tmp)
+        return flask.jsonify(ok=False, error=(
+            'This file is a different meet — its name or session dates differ, '
+            'so it would create a separate cloud meet. Use “Add Meet File” to '
+            'load it as a new meet.'))
+
+    # Same meet: overwrite the current file in place and reload it.
+    dest = os.path.join(state.MEET_FOLDER, state._active_meet_file)
+    os.replace(tmp, dest)
+    err = _load_meet_file(dest)
+    if err:
+        return flask.jsonify(ok=False, error='Failed to load the updated file.')
+    return flask.jsonify(ok=True)
+
+
 @bp.route('/settings', methods=['GET', 'POST'])
 @flask_login.login_required
 def route_settings():

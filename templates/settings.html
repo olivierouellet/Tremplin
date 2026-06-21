@@ -243,11 +243,21 @@ function onPasswordInput(form) {
                         <div id="meet-file-actions" style="display:contents;">
                             {% if active_meet_file %}
                             <a id="meet-preview-btn" href="{{ '/hytek_preview' if active_meet_file.endswith('.csv') else '/lenex_preview' }}" class="btn btn-default btn-xs" style="flex-shrink:0;">Preview</a>
+                            <label class="btn btn-default btn-xs" style="margin:0; font-weight:normal; cursor:pointer; flex-shrink:0; white-space:nowrap;">
+                                Update File<input id="meet_update_file" type="file" accept=".csv,.lxf" style="display:none;" onchange="updateMeetFile(this)">
+                            </label>
                             <button class="btn btn-default btn-xs danger" type="button" style="flex-shrink:0;" onclick="var f=document.getElementById('meet-file-select').value;if(f&&confirm('Delete '+f+'?'))location.href='/meet_delete?file='+encodeURIComponent(f);">Delete</button>
                             <button class="btn btn-default btn-xs danger" type="button" style="flex-shrink:0;" onclick="if(confirm('Delete all meet files?'))location.href='/meet_clear';">Delete All</button>
                             {% endif %}
                         </div>
                     </div>
+                    {% if active_meet_file %}
+                    <div id="meet-update-msg" style="font-size:0.85em; margin-top:6px; display:none;"></div>
+                    <p style="font-size:0.8em; color:#888; margin:4px 0 0;">
+                        <strong>Update File</strong> replaces the current meet's file in place — keeping its cloud link so connected attendees stay attached.
+                        The new file must be the same meet (same name and session dates); otherwise it's rejected. To load a different meet, use <strong>Add Meet File</strong>.
+                    </p>
+                    {% endif %}
                 </div>
             </div>
             <div style="background:#f5f5f5; border:1px solid #e3e3e3; border-radius:4px; padding:8px 14px; margin-top:10px;">
@@ -1274,6 +1284,35 @@ function onPasswordInput(form) {
         });
     });
     function _fsubmit(f) { if (f.requestSubmit) f.requestSubmit(); else f.submit(); }
+    // Replace the loaded meet's file in place. The server only accepts a file
+    // that is the same meet (same meet_uid), so the cloud link is preserved.
+    function updateMeetFile(input) {
+        var file = input.files && input.files[0];
+        if (!file) return;
+        var msg = document.getElementById('meet-update-msg');
+        msg.style.display = 'block';
+        msg.style.color = '#888';
+        msg.textContent = 'Checking…';
+        var fd = new FormData();
+        fd.append('meet_file', file);
+        fetch('/meet_update_file', { method: 'POST', body: fd })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.ok) {
+                    msg.style.color = '#3a7d3a';
+                    msg.textContent = 'Updated — reloading…';
+                    location.reload();
+                } else {
+                    msg.style.color = '#c0392b';
+                    msg.textContent = d.error || 'Update failed.';
+                }
+            })
+            .catch(function() {
+                msg.style.color = '#c0392b';
+                msg.textContent = 'Update failed.';
+            });
+        input.value = '';
+    }
 
     function markDirty(tabId, btnId) {
         document.querySelectorAll('#' + tabId + ' input, #' + tabId + ' select').forEach(function(el) {

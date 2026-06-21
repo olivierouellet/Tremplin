@@ -151,6 +151,22 @@ def _profile_field(f):
     return settings.get(f, _PROFILE_DEFAULTS.get(f, ''))
 
 
+def uid_from_meet_info(meet_info, fallback_file=''):
+    """meet_uid() for an arbitrary parsed meet, without touching global state.
+
+    Lets callers (e.g. the "update file" guard) compute a candidate file's uid
+    and compare it to the loaded meet before committing the swap.
+    """
+    name  = meet_info.get('name', '')
+    dates = sorted(d for d in (s.get('date', '') for s in meet_info.get('sessions', [])) if d)
+    basis = (name + '|' + '|'.join(dates)).strip('|')
+    if not basis:
+        basis = fallback_file
+    if not basis:
+        return ''
+    return hashlib.sha1(basis.encode('utf-8')).hexdigest()[:12]
+
+
 def meet_uid():
     """Stable identifier for the currently loaded meet.
 
@@ -159,14 +175,7 @@ def meet_uid():
     Otherwise (Hytek CSV, no sessions) falls back to the loaded file name.
     Returns '' when nothing is loaded.
     """
-    name  = lenex_meet_info.get('name', '')
-    dates = sorted(d for d in (s.get('date', '') for s in lenex_meet_info.get('sessions', [])) if d)
-    basis = (name + '|' + '|'.join(dates)).strip('|')
-    if not basis:
-        basis = _active_meet_file
-    if not basis:
-        return ''
-    return hashlib.sha1(basis.encode('utf-8')).hexdigest()[:12]
+    return uid_from_meet_info(lenex_meet_info, _active_meet_file)
 
 
 def apply_meet_profile(uid):
