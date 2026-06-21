@@ -1180,6 +1180,7 @@ function onPasswordInput(form) {
             if (d.active) {
                 actions.innerHTML =
                     '<a id="meet-preview-btn" href="' + d.preview_url + '" class="btn btn-default btn-xs" style="flex-shrink:0;">Preview</a>' +
+                    '<label class="btn btn-default btn-xs" style="margin:0; font-weight:normal; cursor:pointer; flex-shrink:0; white-space:nowrap;">Update File<input id="meet_update_file" type="file" accept=".csv,.lxf" style="display:none;" onchange="updateMeetFile(this)"></label>' +
                     '<button class="btn btn-default btn-xs danger" type="button" style="flex-shrink:0;" onclick="var f=document.getElementById(\'meet-file-select\').value;if(f&&confirm(\'Delete \'+f+\'?\'))location.href=\'/meet_delete?file=\'+encodeURIComponent(f);">Delete</button>' +
                     '<button class="btn btn-default btn-xs danger" type="button" style="flex-shrink:0;" onclick="if(confirm(\'Delete all meet files?\'))location.href=\'/meet_clear\';">Delete All</button>';
             } else {
@@ -1301,7 +1302,7 @@ function onPasswordInput(form) {
                 if (d.ok) {
                     msg.style.color = '#3a7d3a';
                     msg.textContent = 'Updated — reloading…';
-                    location.reload();
+                    setTimeout(function() { location.reload(); }, 3000);
                 } else {
                     msg.style.color = '#c0392b';
                     msg.textContent = d.error || 'Update failed.';
