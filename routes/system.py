@@ -314,6 +314,30 @@ def route_rtc_log():
     return flask.jsonify({'lines': state._rtc_log_lines, 'done': state._rtc_log_done})
 
 
+@bp.route('/logs_download')
+@flask_login.login_required
+def route_logs_download():
+    text = '\n'.join(state._log_ring) + '\n'
+    ts   = datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S')
+    return flask.Response(
+        text, mimetype='text/plain',
+        headers={'Content-Disposition': f'attachment; filename="tremplin-log-{ts}.log"'})
+
+
+@bp.route('/logs_save', methods=['POST'])
+@flask_login.login_required
+def route_logs_save():
+    try:
+        os.makedirs(state.LOGS_DIR, exist_ok=True)
+        name = 'tremplin-log-' + datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S') + '.log'
+        path = os.path.join(state.LOGS_DIR, name)
+        with open(path, 'w') as f:
+            f.write('\n'.join(state._log_ring) + '\n')
+        return flask.jsonify({'ok': True, 'path': path})
+    except Exception as e:
+        return flask.jsonify({'ok': False, 'error': str(e)}), 500
+
+
 @bp.route('/system_reboot', methods=['POST'])
 @flask_login.login_required
 def route_system_reboot():

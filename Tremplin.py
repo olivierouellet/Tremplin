@@ -219,6 +219,7 @@ def _register_locale_aliases():
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
+    state.install_log_capture()
     import relay
     from console_decoders import load_custom_decoders
     from routes.settings import _load_meet_file

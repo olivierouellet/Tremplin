@@ -1,3 +1,4 @@
+import collections
 import glob
 import hashlib
 import json
@@ -33,6 +34,7 @@ HOME_ICON_PATH         = os.path.join(ICONS_DIR, 'home_icon.png')
 HOME_ICON_512_PATH     = os.path.join(ICONS_DIR, 'home_icon_512.png')
 PICKER_DIR             = os.path.join(SCOREBOARD_DIR, 'picker')
 MEET_FOLDER            = os.path.join(SCOREBOARD_DIR, 'meet')
+LOGS_DIR               = os.path.join(SCOREBOARD_DIR, 'logs')
 CUSTOM_LOCALE_FOLDER          = os.path.join(SCOREBOARD_DIR, 'locale')
 THEME_FOLDER           = os.path.join(app_dir, 'themes')
 CUSTOM_THEME_FOLDER    = os.path.join(SCOREBOARD_DIR, 'themes')
@@ -189,6 +191,44 @@ def save_meet_profile(uid):
         return
     profiles = settings.setdefault('meet_profiles', {})
     profiles[uid] = {f: _profile_field(f) for f in CLOUD_PROFILE_FIELDS}
+
+# ── Console log capture ──────────────────────────────────────────────────────
+# Keep the most recent console output (the same lines that go to the journal) in
+# a RAM ring buffer so the operator can download it or save it to flash on demand
+# — without writing to flash continuously, which matters on SD-card Pis.
+
+_log_ring = collections.deque(maxlen=10000)
+
+
+class _LogTee:
+    """Wrap a stream so complete lines are also captured into _log_ring."""
+
+    def __init__(self, stream):
+        self._stream = stream
+        self._buf    = ''
+
+    def write(self, s):
+        self._stream.write(s)
+        self._buf += s
+        while '\n' in self._buf:
+            line, self._buf = self._buf.split('\n', 1)
+            _log_ring.append(line)
+        return len(s)
+
+    def flush(self):
+        self._stream.flush()
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
+def install_log_capture():
+    """Tee stdout/stderr into the ring buffer. Idempotent; call once at startup."""
+    if not isinstance(sys.stdout, _LogTee):
+        sys.stdout = _LogTee(sys.stdout)
+    if not isinstance(sys.stderr, _LogTee):
+        sys.stderr = _LogTee(sys.stderr)
+
 
 # ── Runtime state ──────────────────────────────────────────────────────────────
 

@@ -42,6 +42,12 @@ var brief_results = false;
 var _podium_timers = [];
 var _podium_race_key = null;
 
+/* Debounce leaving the results screen: a transient "running" blip at race end
+   (a stray finish/place artifact from the console) must not yank the board out
+   of results and flicker the podium. Only switch to running if it persists. */
+var LEAVE_RESULTS_DEBOUNCE = 350; /* ms */
+var _leave_results_timer   = null;
+
 /* Cached stable DOM references — set once in init() */
 var _pc = null;  /* place-column */
 var _tc = null;  /* time-column  */
@@ -270,6 +276,7 @@ function reset_state() {
     lane_place_blank = {};
     lane_time_blank = {};
     lane_name_blank = {};
+    if (_leave_results_timer) { clearTimeout(_leave_results_timer); _leave_results_timer = null; }
 }
 
 function mode_to_intro() {
@@ -467,13 +474,37 @@ function mode_to_results() {
             if (all_done) current_state = 3;
         }
 
+        var running_now = false;
         for (var i = 1; i <= NUM_LANES; i++) {
-            if (lane_running[i] || false) { current_state = 2; break; }
+            if (lane_running[i] || false) { running_now = true; break; }
         }
+        if (running_now) current_state = 2;
 
         if (current_state === 1 && last_state === 2) {
             brief_results = true;
             current_state = 3;
+        }
+
+        // Hold the results screen against a brief running blip: only leave
+        // results for running once it has persisted for LEAVE_RESULTS_DEBOUNCE.
+        if (last_state === 3 && current_state === 2) {
+            current_state = 3;  // stay on results for now
+            if (_leave_results_timer === null) {
+                _leave_results_timer = setTimeout(function() {
+                    _leave_results_timer = null;
+                    var still = false;
+                    for (var j = 1; j <= NUM_LANES; j++) {
+                        if (lane_running[j] || false) { still = true; break; }
+                    }
+                    if (still && last_state === 3) {
+                        current_state = 2;
+                        apply_state_transition();
+                    }
+                }, LEAVE_RESULTS_DEBOUNCE);
+            }
+        } else if (_leave_results_timer !== null && !running_now) {
+            clearTimeout(_leave_results_timer);
+            _leave_results_timer = null;
         }
 
         apply_state_transition();

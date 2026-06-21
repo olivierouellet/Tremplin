@@ -121,20 +121,62 @@ def _emit_scoreboard_update():
     state.update.clear()
 
 
-def _on_race_state_changed(now_finished):
-    if now_finished and not state._results_prev_race_finished:
+def _lane_log_summary(updates):
+    """(changed-fields, per-lane-snapshot) for a race-state log line.
+
+    `changed` is the subset of this packet that can flip the finished state — i.e.
+    the likely trigger of a flip. The snapshot shows every timed/placed lane as
+    'L<lane>:<place>/<time>' so a flapping lane stands out across consecutive flips.
+    """
+    changed = {k: v for k, v in (updates or {}).items()
+               if k == 'running_time'
+               or k.startswith(('lane_running', 'lane_time', 'lane_place', 'current_'))}
+    lanes = []
+    for i in range(1, int(state.settings.get('num_lanes', 8)) + 1):
+        t = state._decoder.get_lane_time(i)
+        p = state._decoder.get_lane_place(i).strip()
+        if t or p:
+            lanes.append(f'L{i}:{p or "-"}/{t or "-"}')
+    return changed, ' '.join(lanes)
+
+
+def _on_race_state_changed(now_finished, updates=None):
+    prev = state._results_prev_race_finished
+
+    if now_finished != prev:
+        changed, lanes = _lane_log_summary(updates)
+        print(f'[race-state] finished {prev}->{now_finished} '
+              f'trigger={changed} lanes=[{lanes}]', flush=True)
+
+    if now_finished and not prev:
         state._last_results_snapshot = _build_results_snapshot()
         state._finish_timer_gen += 1
         def _finish_task(gen=state._finish_timer_gen, snap=state._last_results_snapshot):
             socketio.sleep(float(state.settings.get('finish_debounce', 3.0)))
             if state._finish_timer_gen == gen:
+                print('[race-state] results confirmed', flush=True)
                 socketio.emit('race_finished', {}, namespace='/scoreboard')
                 socketio.emit('results_snapshot', snap, namespace='/results')
                 relay.relay_emit('results_snapshot', snap)
         socketio.start_background_task(_finish_task)
-    elif not now_finished and state._results_prev_race_finished:
+
+    elif not now_finished and prev:
+        # Race left the finished state. Debounce the board wipe: a transient blip
+        # at race end (a stray finish/place artifact from the console) must not
+        # blank the board and flicker the display. Only reset if a genuine
+        # re-start is still un-finished after the debounce window.
         state._finish_timer_gen += 1
-        state.update.update(state._decoder.reset_lanes())
+        def _reset_task(gen=state._finish_timer_gen):
+            socketio.sleep(float(state.settings.get('reset_debounce', 1.0)))
+            if state._finish_timer_gen != gen or state._decoder.race_finished():
+                print('[race-state] reset skipped (transient un-finish suppressed)', flush=True)
+                return
+            print('[race-state] board reset (sustained re-start)', flush=True)
+            data = state._decoder.reset_lanes()
+            socketio.emit('update_scoreboard', data, namespace='/scoreboard')
+            relay.relay_emit('update_scoreboard', data)
+        socketio.start_background_task(_reset_task)
+
     state._results_prev_race_finished = now_finished
 
 
@@ -154,13 +196,14 @@ def _handle_packet(l):
 
         if 'event_changed' in updates:
             ev, ht = updates.pop('event_changed')
+            print(f'[event] Event {ev} Heat {ht}', flush=True)
             _on_event_changed(updates, ev, ht)
 
         _add_lane_deltas(updates)
         state.update.update(updates)
 
         _emit_scoreboard_update()
-        _on_race_state_changed(state._decoder.race_finished())
+        _on_race_state_changed(state._decoder.race_finished(), updates)
 
         if state._debug_serial and hex_str:
             socketio.emit('debug_line', {'hex': hex_str, 'text': _packet_summary(updates)},
