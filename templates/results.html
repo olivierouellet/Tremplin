@@ -4,14 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Results</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/timing_display.css') }}">
     <style>
-        @font-face {
-            font-family: 'DSEG7Classic';
-            font-style: normal;
-            font-weight: 400;
-            font-display: swap;
-            src: url('/static/fonts/DSEG7Classic-Regular.woff2') format('woff2');
-        }
+        /* Theme injection — same vars the shared stylesheet reads. */
         :root {
             --color-bg:            {{ theme_colors.bg }};
             --color-header-bg:     {{ theme_colors.header_bg }};
@@ -29,156 +24,59 @@
             --color-podium-gold:   {{ theme_colors.podium_gold }};
             --color-podium-silver: {{ theme_colors.podium_silver }};
             --color-podium-bronze: {{ theme_colors.podium_bronze }};
-            --font-family:         '{{ theme_fonts.family }}', monospace;
-            --font-digits:         '{{ theme_fonts.digits }}', monospace;
-            --font-timing:         '{{ theme_fonts.timing }}', monospace;
+            --font-family:         '{{ theme_fonts.family }}';
+            --font-digits:         '{{ theme_fonts.digits }}';
+            --font-timing:         '{{ theme_fonts.timing }}';
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* ── Results-specific overrides on top of timing_display.css ──────────
+           The shared sheet drives the board look (header bar, table, fonts,
+           podium) so this page matches live.html. Only what's unique to the
+           static results view lives here. Unlike live.html, this page never
+           applies the .hide-* column toggles, so all six columns always show. */
 
-        html { height: 100%; }
-
-        body {
-            background: var(--color-bg);
-            color: var(--color-row-text);
-            font-family: var(--font-family);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        /* ── Header ── */
-        #header {
-            display: flex;
-            align-items: stretch;
-            flex-shrink: 0;
-            background: var(--color-header-bg);
-            border-bottom: 2px solid var(--color-header-border);
-        }
-        .hdr-cell {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 0.8vh 2vw;
-            border-left: 1px solid var(--color-header-border);
-            white-space: nowrap;
-        }
-        .hdr-cell:first-child { border-left: none; }
-        .hdr-cell-name { flex: 1; align-items: center; }
-        .hdr-label {
-            font-size: 1.8vh;
-            color: var(--color-header-label);
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-        }
-        .hdr-value {
-            font-size: 4vh;
-            color: var(--color-header-value);
-        }
+        /* Header: event/heat digits, 2-line event name, clock — mirror live. */
         #res-event, #res-heat {
-            font-family: 'DSEG7Classic', var(--font-digits), monospace;
+            font-family: var(--font-digits), monospace;
             font-size: 4.5vh;
+            line-height: 1;
             color: var(--color-header-label);
         }
         #res-name {
-            font-size: 4vh;
+            max-width: 100%;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            white-space: normal;
+            line-height: 1.2;
+            font-size: 3vh;
+            text-align: center;
+        }
+        #res-datetime {
+            font-family: var(--font-digits), monospace;
+            font-size: 4.5vh;
             color: var(--color-header-value);
         }
 
-        /* ── Table wrapper fills remaining height ── */
-        #results-wrap {
-            flex: 1;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
+        /* live.html animates time/delta/place open from 0; this static view
+           shows them permanently at live's expanded widths so every column is
+           always visible. */
+        .results-table .time-column       { width: 17vw; max-width: 17vw; }
+        .results-table .delta-column      { width: 15vw; max-width: 15vw; }
+        .results-table .place-column      { width: 6vw;  max-width: 6vw;  }
+        .results-table [id^="lane_place"] { font-family: var(--font-digits), monospace; }
 
-        table {
-            width: 100%;
-            height: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
-
-        thead th {
-            background: var(--color-th-bg);
-            color: var(--color-th-text);
-            font-size: 3vh;
-            font-weight: normal;
-            padding: 0.4vh 0.8vw;
-            text-align: left;
-            white-space: nowrap;
-        }
-
-        thead th:nth-child(1) { width: 6%;  text-align: center; }  /* Lane  */
-        thead th:nth-child(2) { width: 34%; }                      /* Name  */
-        thead th:nth-child(3) { width: 14%; }                      /* Club  */
-        thead th:nth-child(4) { width: 20%; text-align: center; }  /* Time  */
-        thead th:nth-child(5) { width: 16%; text-align: center; }  /* Delta */
-        thead th:nth-child(6) { width: 10%; text-align: center; }  /* Place */
-
-        tbody tr {
-            transition: background 0.3s;
-            font-size: calc({{ (42 / num_lanes) | round(1) }}vh);
-        }
-        tbody tr:nth-child(odd)  { background: var(--color-row-odd); }
-        tbody tr:nth-child(even) { background: var(--color-row-even); }
-        tbody tr.podium-gold   { background: var(--color-podium-gold); }
-        tbody tr.podium-silver { background: var(--color-podium-silver); }
-        tbody tr.podium-bronze { background: var(--color-podium-bronze); }
-
-        tbody td {
-            padding: 0 0.8vw;
-            color: var(--color-row-text);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            vertical-align: middle;
-        }
-
-        /* Monospace font for time/delta keeps column widths predictable */
-        td.td-time, td.td-delta { font-family: var(--font-timing), monospace; }
-
-        td.td-place {
-            font-weight: bold;
-            color: var(--color-header-label);
-            text-align: center;
-        }
-        td.td-lane  { text-align: center; color: var(--color-th-text); }
-        td.td-time  {
-            color: var(--color-time);
-            text-align: center;
-        }
-        td.td-delta {
-            text-align: center;
-            font-size: 0.75em; /* relative to tbody font-size */
-        }
-
-        td.td-name { white-space: normal; }
-
+        /* Shrink an over-long name to fit rather than wrapping or clipping. */
         .name-primary {
             display: block;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .name-sub {
-            display: block;
-            font-size: 0.65em;
-            color: var(--color-th-text);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            line-height: 1.2;
-        }
-        .name-sub:empty { display: none; }
 
-        .delta-better { color: var(--color-delta-better); }
-        .delta-worse  { color: var(--color-delta-worse); }
-
-        /* ── Waiting state ── */
+        /* Waiting-for-results placeholder. */
         #waiting {
             flex: 1;
             display: flex;
@@ -188,21 +86,18 @@
             font-size: 1.4em;
         }
 
-        /* ── Portrait: two-row stacked grid layout ──────────────────────────
+        /* ── Portrait: two-row stacked grid for phones/tablets ───────────────
            Row 1:  [Lane] [Name ................] [Club ]
            Row 2:         [Time] [Delta        ] [#Pos ]
-           ────────────────────────────────────────────────────────────────── */
+           Selectors are scoped with .results-table so they outweigh the shared
+           .timing-row-* rules (which would otherwise pin font-size/widths). */
         @media (orientation: portrait) {
             #results-wrap { overflow-y: auto; }
 
-            /* Break the table model so each tr can become a CSS grid */
-            table, table tbody { display: block; width: 100%; height: auto; }
-            table thead { display: none; }
+            .results-table, .results-table tbody { display: block; width: 100%; height: auto; }
+            .results-table thead { display: none; }
 
-            /* grid: [lane 9vw] [name/time 1fr] [delta 12vw] [club/place 14vw]
-               Fixed vw widths on cols 3–4 keep delta and place aligned across
-               all rows regardless of club name length. */
-            table tbody tr {
+            .results-table tbody tr {
                 display: grid;
                 grid-template-columns: 9vw 1fr 20vw 14vw;
                 grid-template-rows: auto auto;
@@ -211,8 +106,7 @@
                 font-size: min(3.5vh, 4.5vw);
             }
 
-            /* Reset table-model constraints on every td */
-            table tbody td {
+            .results-table tbody td {
                 width: auto !important;
                 max-width: none !important;
                 white-space: nowrap !important;
@@ -223,23 +117,17 @@
             }
 
             /* td 1 — Lane: anchor spanning both rows */
-            table tbody td:nth-child(1) {
+            .results-table tbody td:nth-child(1) {
                 grid-column: 1;
                 grid-row: 1 / 3;
                 display: flex;
                 align-items: center;
                 justify-content: center;
             }
-
             /* td 2 — Name: row 1, spans cols 2–3 */
-            table tbody td:nth-child(2) {
-                grid-column: 2 / 4;
-                grid-row: 1;
-                padding-bottom: 0;
-            }
-
+            .results-table tbody td:nth-child(2) { grid-column: 2 / 4; grid-row: 1; padding-bottom: 0; }
             /* td 3 — Club: row 1, col 4 — small, muted, right-aligned */
-            table tbody td:nth-child(3) {
+            .results-table tbody td:nth-child(3) {
                 grid-column: 4;
                 grid-row: 1;
                 font-size: 0.75em;
@@ -247,99 +135,76 @@
                 text-align: right !important;
                 padding-bottom: 0;
             }
-
             /* td 4 — Time: row 2, col 2 */
-            table tbody td:nth-child(4) {
-                grid-column: 2;
-                grid-row: 2;
-                padding-top: 0;
-                font-size: 0.92em;
-                text-align: left !important;
-            }
-
+            .results-table tbody td:nth-child(4) { grid-column: 2; grid-row: 2; padding-top: 0; font-size: 0.92em; text-align: left  !important; }
             /* td 5 — Delta: row 2, col 3 */
-            table tbody td:nth-child(5) {
-                grid-column: 3;
-                grid-row: 2;
-                padding-top: 0;
-                font-size: 0.78em;
-                text-align: right !important;
-            }
-
+            .results-table tbody td:nth-child(5) { grid-column: 3; grid-row: 2; padding-top: 0; font-size: 0.78em; text-align: right !important; }
             /* td 6 — Place: row 2, col 4 */
-            table tbody td:nth-child(6) {
-                grid-column: 4;
-                grid-row: 2;
-                text-align: right !important;
-                padding-top: 0;
-                font-size: 0.78em;
-            }
-
+            .results-table tbody td:nth-child(6) { grid-column: 4; grid-row: 2; padding-top: 0; font-size: 0.78em; text-align: right !important; }
             /* # prefix on place number */
-            td.td-place::before { content: '#'; opacity: 0.5; font-weight: normal; }
+            .results-table tbody td:nth-child(6)::before { content: '#'; opacity: 0.5; }
         }
 
-        /* ── Landscape tablet (height ≥ 500px): rein in secondary cells ── */
-        @media (orientation: landscape) and (min-height: 500px) {
-            table tbody td.td-time  { font-size: 0.72em; }
-            table tbody td.td-delta { font-size: 0.58em; }
-            table tbody td.td-club  { font-size: 0.68em; }
-        }
-
-        /* ── Portrait tablet (≥600px): secondary cells smaller so name stays dominant ── */
+        /* Portrait tablet (≥600px): secondary cells smaller so name stays dominant. */
         @media (orientation: portrait) and (min-width: 600px) {
-            table tbody td:nth-child(3) { font-size: 0.58em; }  /* club  */
-            table tbody td:nth-child(4) { font-size: 0.70em; }  /* time  */
-            table tbody td:nth-child(5) { font-size: 0.60em; }  /* delta */
+            .results-table tbody td:nth-child(3) { font-size: 0.58em; }  /* club  */
+            .results-table tbody td:nth-child(4) { font-size: 0.70em; }  /* time  */
+            .results-table tbody td:nth-child(5) { font-size: 0.60em; }  /* delta */
         }
     </style>
 </head>
 <body>
 
-    <div id="header">
-        <div class="hdr-cell" id="res-event-cell" style="display:none;">
-            <span class="hdr-label">{{ labels.event | default('Event') }}</span>
-            <span id="res-event">—</span>
-        </div>
-        <div class="hdr-cell" id="res-heat-cell" style="display:none;">
-            <span class="hdr-label">{{ labels.heat | default('Heat') }}</span>
-            <span id="res-heat">—</span>
-        </div>
-        <div class="hdr-cell hdr-cell-name" id="res-name-cell" style="display:none;">
-            <span id="res-name"></span>
-        </div>
-        <div class="hdr-cell" style="margin-left:auto;">
-            <span id="res-datetime" style="font-family:'DSEG7Classic',var(--font-digits),monospace;font-size:4.5vh;color:var(--color-header-value);"></span>
-        </div>
-    </div>
+    <div class="timing-outer">
 
-    <div id="waiting">{{ t.waiting_results or 'Waiting for results…' }}</div>
+        <!-- Header bar -->
+        <div class="timing-header-bar">
+            <div class="header_cell" id="res-event-cell" style="display:none;">
+                <span class="header_label">{{ labels.event | default('Event') }}</span>
+                <span class="header_value" id="res-event">—</span>
+            </div>
+            <div class="header_cell" id="res-heat-cell" style="display:none;">
+                <span class="header_label">{{ labels.heat | default('Heat') }}</span>
+                <span class="header_value" id="res-heat">—</span>
+            </div>
+            <div class="header_cell header_cell_name" id="res-name-cell" style="display:none;">
+                <span class="header_value" id="res-name"></span>
+            </div>
+            <div class="header_cell" style="margin-left:auto;">
+                <span id="res-datetime"></span>
+            </div>
+        </div>
 
-    <div id="results-wrap" style="display:none;">
-        <table>
-            <thead id="results-thead">
-                <tr>
-                    <th>{{ labels.lane  | default('Lane')  }}</th>
-                    <th>{{ labels.name  | default('Name')  }}</th>
-                    <th>{{ labels.club  | default('Club')  }}</th>
-                    <th>{{ labels.time  | default('Time')  }}</th>
-                    <th>{{ labels.delta | default('Delta') }}</th>
-                    <th>{{ labels.place | default('Place') }}</th>
-                </tr>
-            </thead>
-            <tbody id="results-body">
-                {% for i in range(1, num_lanes + 1) %}
-                <tr id="result-row-{{ i }}">
-                    <td class="td-lane">—</td>
-                    <td class="td-name"></td>
-                    <td class="td-club"></td>
-                    <td class="td-time">—</td>
-                    <td class="td-delta"></td>
-                    <td class="td-place">—</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div id="waiting">{{ t.waiting_results or 'Waiting for results…' }}</div>
+
+        <!-- Scoreboard table -->
+        <div class="timing-content" id="results-wrap" style="display:none;">
+            <table class="timing-table results-table">
+                <thead>
+                    <tr class="timing-header">
+                        <th class="lane-column"  style="text-align:center;">{{ labels.lane  | default('Lane')  }}</th>
+                        <th id="name-column"     style="text-align:left;">{{ labels.name  | default('Name')  }}</th>
+                        <th class="club-column"  style="text-align:left;">{{ labels.club  | default('Club')  }}</th>
+                        <th class="time-column"  style="text-align:center;">{{ labels.time  | default('Time')  }}</th>
+                        <th class="delta-column" style="text-align:center;">{{ labels.delta | default('Delta') }}</th>
+                        <th class="place-column" style="text-align:center;">{{ labels.place | default('Place') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in range(1, num_lanes + 1) %}
+                    <tr class="{{ 'timing-row-odd' if i % 2 == 1 else 'timing-row-even' }}" id="result-row-{{ i }}">
+                        <td style="text-align:center;">—</td>
+                        <td class="lane-name-cell"><span class="name-primary"></span><span class="name-sub"></span></td>
+                        <td id="lane_club{{ i }}" style="text-align:left;"></td>
+                        <td class="td_time" style="text-align:center;">—</td>
+                        <td class="td_delta" style="text-align:right;"></td>
+                        <td id="lane_place{{ i }}" style="text-align:center;">—</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
     </div>
 
     <script src="/static/js/socket.io.min.js"></script>
@@ -357,13 +222,10 @@
 
     var sock = io('/results');
     sock.on('reload', function() { location.reload(); });
-
-    sock.on('results_snapshot', function(d) {
-        renderResults(d);
-    });
+    sock.on('results_snapshot', function(d) { renderResults(d); });
 
     function fitNameFontSize() {
-        document.querySelectorAll('td.td-name').forEach(function(cell) {
+        document.querySelectorAll('.lane-name-cell').forEach(function(cell) {
             cell.style.fontSize = '';
             var primary = cell.querySelector('.name-primary');
             if (!primary || primary.scrollWidth <= primary.clientWidth) return;
@@ -395,14 +257,15 @@
         for (var i = 1; i <= NUM_LANES; i++) {
             var tr = document.getElementById('result-row-' + i);
             var r  = byRow[i];
+            // Toggle only the podium classes — keep the row's base striping
+            // class (timing-row-odd/even), which also carries its font-size.
+            tr.classList.remove('podium-gold', 'podium-silver', 'podium-bronze');
             if (r) {
-                var place    = (r.place || '').trim();
-                var placeNum = parseInt(place);
-                tr.className = '';
                 if (SHOW_PODIUM) {
-                    if      (placeNum === 1) tr.className = 'podium-gold';
-                    else if (placeNum === 2) tr.className = 'podium-silver';
-                    else if (placeNum === 3) tr.className = 'podium-bronze';
+                    var placeNum = parseInt((r.place || '').trim());
+                    if      (placeNum === 1) tr.classList.add('podium-gold');
+                    else if (placeNum === 2) tr.classList.add('podium-silver');
+                    else if (placeNum === 3) tr.classList.add('podium-bronze');
                 }
                 tr.cells[0].textContent = r.channel || '—';
                 tr.cells[1].innerHTML   = '<span class="name-primary">' + escHtml(r.name || '') + '</span>' +
@@ -410,9 +273,8 @@
                 tr.cells[2].textContent = r.club  || '';
                 tr.cells[3].textContent = r.time  || '—';
                 tr.cells[4].innerHTML   = r.delta || '';
-                tr.cells[5].textContent = place || '—';
+                tr.cells[5].textContent = (r.place || '').trim() || '—';
             } else {
-                tr.className = '';
                 tr.cells[0].textContent = laneMode ? i : '—';
                 tr.cells[1].innerHTML   = '<span class="name-primary"></span><span class="name-sub"></span>';
                 tr.cells[2].textContent = '';
