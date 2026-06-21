@@ -116,7 +116,8 @@ def _build_results_snapshot():
             'alt':       alt,
             'delta':     delta,
         })
-    if state.settings.get('results_sort', 'lane') == 'place':
+    sort = state.settings.get('results_sort', 'lane')
+    if sort == 'place':
         lanes.sort(key=lambda r: r['place_int'])
     else:
         lanes.sort(key=lambda r: r['channel'])
@@ -124,6 +125,10 @@ def _build_results_snapshot():
         'event':      str(ev) if ev else '',
         'heat':       str(ht) if ht else '',
         'event_name': get_event_name_display(ev) if ev else '',
+        # Lanes without a final time are omitted above; 'sort' lets the client
+        # place each result in the row matching its lane (lane mode) so a missing
+        # lane leaves a blank row instead of shifting the lanes below it up.
+        'sort':       sort,
         'lanes':      lanes,
     }
 

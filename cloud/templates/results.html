@@ -39,9 +39,19 @@ function renderResults(d) {
     document.getElementById('current_heat').innerHTML  = escHtml(d.heat  || '');
     document.getElementById('event_name').innerHTML    = escHtml(d.event_name || '');
 
+    // Map each result to a display row. In lane mode (the default) a row equals
+    // its lane number, so a lane with no final time leaves that row blank instead
+    // of shifting the lanes below it up. In place mode the list is a ranking, so
+    // it fills rows top-down. Older relays omit `sort` → treated as lane mode.
+    var byRow = {}, laneMode = !d.sort || d.sort === 'lane';
+    lanes.forEach(function(r, idx) {
+        var row = laneMode ? parseInt(r.channel, 10) : idx + 1;
+        if (row >= 1 && row <= NUM_LANES) byRow[row] = r;
+    });
+
     reset_times();
     for (var i = 1; i <= NUM_LANES; i++) {
-        var r = lanes[i - 1];
+        var r = byRow[i];
         if (r) {
             document.getElementById('lane_num'     + i).textContent = r.channel || i;
             document.getElementById('lane_name'    + i).innerHTML   = escHtml(r.name || '');

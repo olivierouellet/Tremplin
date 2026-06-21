@@ -381,9 +381,20 @@
         document.getElementById('res-heat-cell').style.display  = '';
         document.getElementById('res-name-cell').style.display  = '';
 
+        // Map each result to a display row. In lane mode (the default) a row equals
+        // its lane number, so a lane with no final time leaves that row blank
+        // instead of shifting the lanes below it up. In place mode the list is a
+        // ranking, so it fills rows top-down. Older data omits `sort` → lane mode.
+        var lanes = d.lanes || [];
+        var byRow = {}, laneMode = !d.sort || d.sort === 'lane';
+        lanes.forEach(function(r, idx) {
+            var row = laneMode ? parseInt(r.channel, 10) : idx + 1;
+            if (row >= 1 && row <= NUM_LANES) byRow[row] = r;
+        });
+
         for (var i = 1; i <= NUM_LANES; i++) {
             var tr = document.getElementById('result-row-' + i);
-            var r  = d.lanes[i - 1];
+            var r  = byRow[i];
             if (r) {
                 var place    = (r.place || '').trim();
                 var placeNum = parseInt(place);
@@ -402,7 +413,7 @@
                 tr.cells[5].textContent = place || '—';
             } else {
                 tr.className = '';
-                tr.cells[0].textContent = '—';
+                tr.cells[0].textContent = laneMode ? i : '—';
                 tr.cells[1].innerHTML   = '<span class="name-primary"></span><span class="name-sub"></span>';
                 tr.cells[2].textContent = '';
                 tr.cells[3].textContent = '—';
